@@ -1,2 +1,2 @@
 # flowd
-Flow marking service
+Network flow and packet marking service
