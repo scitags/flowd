@@ -1,0 +1,5 @@
+# subprocess32; python_version < '3.0'
+python-daemon == 2.2.4
+psutil
+requests
+# systemd-python
