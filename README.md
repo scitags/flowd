@@ -1,10 +1,10 @@
 # Network flow and packet marking service
 
-**flowd** is a network flow and packet marking service developed based on the draft [technical specification](https://docs.google.com/document/d/1x9JsZ7iTj44Ta06IHdkwpv5Q2u4U2QGLWnUeN2Zf5ts/edit).
+**flowd** is a network flow and packet marking service developed based on the [technical specification](https://docs.google.com/document/d/1x9JsZ7iTj44Ta06IHdkwpv5Q2u4U2QGLWnUeN2Zf5ts/edit).
 It provides a pluggable system to test different flow/packet marking strategies using various plugins to generate flow 
-identifiers and a set of backends that implement the packet/flow marking. Plugins and backends run in parallel processes,
-which are synchronised using a queue. There is also initial support for systemd/journal integration, docker development
-environment, STUN/TURN IP detection, etc.
+identifiers and a set of backends that implement the actual packet and flow marking. Plugins and backends run in parallel processes,
+which can be extended to process pools and synchronised using a multiprocessing queue. There is also initial support for systemd/journal integration (Linux daemon), docker development
+environment, STUN/TURN IP detection and configuration.  
 
 The following plugins are provided:
 - netstat - scans the network connections on a host, filters out private/local network and issues a partial flow tag with 
