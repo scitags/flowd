@@ -8,10 +8,9 @@ There is also initial support for systemd/journal integration (Linux daemon), do
 environment, STUN/TURN IP detection and configuration.  
 
 The following *plugins* are currently available:
-- netstat - scans the network connections on a host, filters out private/local network and issues a partial flow tag with 
-experiment provided in the configuration (flowd.cfg).
-- np_api - API based on named pipe (/var/run/flowd) that can be used for testing purposes or by other systems to directly 
-  pass the flow identifiers.
+- netstat - scans the network connections on a host, filters out private/local network and generates a flow identifier 
+  with the experiment provided in the configuration (partial tagging).
+- np_api - API based on named pipe (/var/run/flowd) that can be used to directly pass the flow identifiers to flowd.
   
 The following backend is provided:
 - udp-firefly - initial implementation of the UDP firefly packets.
