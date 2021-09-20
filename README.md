@@ -28,7 +28,8 @@ docker build -t <image>:<tag> .
 
 and can be started with:
 ```buildoutcfg
-docker run --privileged --network=host -it -v /<local_fork_path>/flowd:/usr/src/app --entrypoint=/bin/bash <image>:<tag>  
+docker run --privileged --network=host -it -v /<local_fork_path>/flowd:/usr/src/app \
+           --entrypoint=/bin/bash <image>:<tag>  
 ```
 
 Before staring the service an initial configuration needs to be added in /etc/flowd/flowd.cfg 

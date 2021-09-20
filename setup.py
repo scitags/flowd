@@ -1,18 +1,18 @@
 from setuptools import setup
 
-import scitag
+import scitags
 
 NAME = 'python-flowd'
-VERSION = scitag.VERSION
-DESCRIPTION = "Flow and Packet Marking Daemon"
+VERSION = scitags.VERSION
+DESCRIPTION = "Flow and Packet Marking Service"
 LONG_DESCRIPTION = """
-Flow and Packet Marking Service (www.scitag.org)
+Flow and Packet Marking Service (www.scitags.org)
 """
-AUTHOR = scitag.AUTHOR
-AUTHOR_EMAIL = scitag.AUTHOR_EMAIL
+AUTHOR = scitags.AUTHOR
+AUTHOR_EMAIL = scitags.AUTHOR_EMAIL
 LICENSE = "ASL 2.0"
 PLATFORMS = "Any"
-URL = "https://github.com/sci-tag/flowd"
+URL = "https://github.com/scitags/flowd"
 CLASSIFIERS = [
     "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: Apache Software License",
@@ -36,7 +36,7 @@ setup(name=NAME,
       url=URL,
       classifiers=CLASSIFIERS,
       keywords='operations python network flow packet marking',
-      packages=['scitag'],
+      packages=['scitags'],
       install_requires=[],
       data_files=[
           ('/usr/sbin', ['sbin/flowd']),

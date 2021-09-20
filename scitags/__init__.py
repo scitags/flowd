@@ -14,6 +14,10 @@ class FlowConfigException(Exception):
     pass
 
 
+class FlowIdException(Exception):
+    pass
+
+
 # Flow Identifier
 # flow-start
 #   inputs: (protocol, src, src_port, dst, dst_port, experiment, activity)
@@ -22,3 +26,7 @@ class FlowConfigException(Exception):
 # flow-update (optional)
 #   inputs: (protocol, src, src_port, dst, dst_port, experiment, activity)
 FlowID = collections.namedtuple('FlowID', ['state', 'prot', 'src', 'src_port', 'dst', 'dst_port', 'exp', 'act'])
+
+
+# IP config container
+IPConfig = collections.namedtuple('ip_config', ['pub_ip4', 'int_ip4', 'pub_ip6', 'int_ip6'])

@@ -2,11 +2,11 @@ import os
 import sys
 import logging
 
-from scitag import settings
+from scitags import settings
 
 __all__ = ['config']
 
-log = logging.getLogger('scitag')
+log = logging.getLogger('scitags')
 _bcf = settings.CONFIG_PATH
 
 if not os.path.exists(_bcf):
@@ -20,4 +20,6 @@ else:
     with open(_bcf) as f:
         code = compile(f.read(), os.path.basename(_bcf), 'exec')
         exec(code, {}, config)
-log.debug("loaded configuration: %s" % config)
+log.info("configuration loaded")
+log.debug("config: {}".format(config))
+

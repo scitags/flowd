@@ -2,25 +2,28 @@
 import logging
 import logging.handlers
 import argparse
+import os.path
+
 import systemd.journal
 import daemon
 import signal
 import fcntl
 import sys
+import lockfile
 
-import scitag
-import scitag.settings
-import scitag.service
+import scitags
+import scitags.settings
+import scitags.service
 
-log = logging.getLogger("scitag")
+log = logging.getLogger("scitags")
 
 
 def args_parser():
     parser = argparse.ArgumentParser(description='flowd - flow and packet marking daemon')
-    parser.add_argument('--version', action='version', version='%(prog)s ' + str(scitag.__version__))
-    parser.add_argument('-c', '--config', default=scitag.settings.CONFIG_PATH,
+    parser.add_argument('--version', action='version', version='%(prog)s ' + str(scitags.__version__))
+    parser.add_argument('-c', '--config', default=scitags.settings.CONFIG_PATH,
                         help='Specify path of the configuration file (defaults to {})'.format(
-                            scitag.settings.CONFIG_PATH))
+                            scitags.settings.CONFIG_PATH))
     parser.add_argument('-d', '--debug', action='store_true', help='Debug mode (implies run in foreground)')
     parser.add_argument('-f', '--fg', action='store_true', help='Run in foreground')
     args = parser.parse_args()
@@ -48,13 +51,22 @@ def args_parser():
         log.addHandler(fh)
 
     if args.config:
-        scitag.settings.CONFIG_PATH = args.config
+        scitags.settings.CONFIG_PATH = args.config
 
-    from scitag.config import config
+    from scitags.config import config
 
     # todo: check config sanity
     # todo: check system files/dirs accessible/created
-
+    if 'BACKEND' not in config.keys() or 'PLUGIN' not in config.keys():
+        log.error('Configuration missing backend and/or plugin')
+        sys.exit(-1)
+    if 'FLOW_MAP_API' not in config.keys():
+        log.error('Configuration is missing FLOW_MAP_API URL')
+        sys.exit(-1)
+    if os.path.isfile(scitags.settings.PID_FILE):
+        log.error('PID file found: {}; another instance already running ?'.format(scitags.settings.PID_FILE))
+        if not (args.fg and args.debug):
+            sys.exit(-1)
     return args
 
 
@@ -65,12 +77,12 @@ def lock_file(f):
 
 if __name__ == "__main__":
     p_args = args_parser()
-    pid_file = open(scitag.settings.PID_FILE, 'w')
-    flow_service = scitag.service.FlowService(p_args, pid_file)
+    flow_service = scitags.service.FlowService(p_args)
     context = daemon.DaemonContext(
-        working_directory=scitag.settings.WORK_DIR,
+        working_directory=scitags.settings.WORK_DIR,
         umask=0o002,
-        pidfile=lock_file(pid_file),
+        #pidfile=lock_file(scitags.settings.PID_FILE),
+        pidfile=lockfile.FileLock(scitags.settings.PID_FILE),
     )
 
     # config_file = open(scitag.settings.CONFIG_PATH)
@@ -79,7 +91,7 @@ if __name__ == "__main__":
     context.signal_map = {
         signal.SIGTERM: flow_service.cleanup,
         signal.SIGHUP: 'terminate',
-        signal.SIGUSR1: scitag.service.FlowService.reload_config(),
+        signal.SIGUSR1: scitags.service.FlowService.reload_config(),
     }
 
     flow_service.init_plugins()
