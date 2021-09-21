@@ -41,6 +41,6 @@ setup(name=NAME,
       data_files=[
           ('/usr/sbin', ['sbin/flowd']),
           ('/etc/flowd', ['etc/flowd.cfg']),
-          ('/usr/lib/systemd/system/flowd.service', ['etc/flowd.service']),
+          ('/usr/lib/systemd/system', ['etc/flowd.service']),
       ]
       )
