@@ -1,0 +1,9 @@
+include README.md
+include LICENSE
+include setup.py
+
+recursive-include etc *
+include sbin/*
+
+
+
