@@ -67,6 +67,14 @@ def args_parser():
         log.error('PID file found: {}; another instance already running ?'.format(scitags.settings.PID_FILE))
         if not (args.fg and args.debug):
             sys.exit(-1)
+    if not os.path.isdir(scitags.settings.WORK_DIR):
+        log.warning('Missing working directory {}, will attempt to create it'.format(scitags.settings.WORK_DIR))
+        os.makedirs(scitags.settings.WORK_DIR)
+
+    if not os.access(scitags.settings.WORK_DIR, os.W_OK):
+        log.error('Unable to write to working directory {}'.format(scitags.settings.WORK_DIR))
+        sys.exit(-1)
+
     return args
 
 

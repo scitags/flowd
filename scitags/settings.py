@@ -1,6 +1,6 @@
 CONFIG_PATH = '/etc/flowd/flowd.cfg'
 PID_FILE = '/var/run/flowd.pid'
-WORK_DIR = '/var/lib/flowd'
+WORK_DIR = '/var/cache/flowd'
 DEFAULT_BACKEND = 'udp_firefly'
 NP_API_FILE = '/var/run/flowd'
 UDP_FIREFLY_PORT = 10514
