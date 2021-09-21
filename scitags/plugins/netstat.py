@@ -23,7 +23,7 @@ def init():
     if 'NETSTAT_INTERNAL_NETWORKS' in config.keys():
         for net in config['NETSTAT_INTERNAL_NETWORKS']:
             try:
-                ipaddress.ip_network(net)
+                ipaddress.ip_network(u'{}'.format(net))
             except ValueError as e:
                 log.error('Unable to parse network {}, configuration error'.format(net))
                 raise scitags.FlowConfigException('Unable to parse network {}'.format(net))
@@ -49,7 +49,7 @@ def run(flow_queue, term_event, ip_config):
     init_pass = True
     if 'NETSTAT_INTERNAL_NETWORKS' in config.keys():
         for net in config['NETSTAT_INTERNAL_NETWORKS']:
-            int_networks.add(ipaddress.ip_network(net))
+            int_networks.add(ipaddress.ip_network(u'{}'.format(net)))
 
     while not term_event.is_set():
         netstat = set()
