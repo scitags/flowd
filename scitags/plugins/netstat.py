@@ -79,8 +79,6 @@ def run(flow_queue, term_event, ip_config):
                 continue
             netstat.add((prot, saddr, sport, daddr, dport))
             netstat_status[(prot, saddr, sport, daddr, dport)] = status
-        log.debug(netstat)
-        log.debug(netstat_status)
 
         if init_pass:
             for c in netstat:
