@@ -1,0 +1,16 @@
+[Unit]
+Description=Flow and Packet Marking Service
+Documentation=https://www.scitags.org
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/flowd --fg
+ExecReload=/bin/kill -USR1 $MAINPID
+KillMode=process
+Restart=always
+RestartSec=42s
+
+[Install]
+WantedBy=multi-user.target
