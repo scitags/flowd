@@ -2,6 +2,8 @@ import logging
 import time
 import psutil
 import ipaddress
+from datetime import datetime
+from pprint import pformat
 
 import scitags
 import scitags.settings
@@ -44,7 +46,7 @@ def __int_ip(ip, int_networks):
 
 
 def run(flow_queue, term_event, ip_config):
-    netstat_prev = set()
+    netstat_index = dict()
     int_networks = set()
     init_pass = True
     if 'NETSTAT_INTERNAL_NETWORKS' in config.keys():
@@ -52,8 +54,7 @@ def run(flow_queue, term_event, ip_config):
             int_networks.add(ipaddress.ip_network(u'{}'.format(net)))
 
     while not term_event.is_set():
-        netstat = set()
-        netstat_status = dict()
+        netstat = dict()
         try:
             netc = psutil.net_connections(kind='tcp')
         except Exception as e:
@@ -77,51 +78,57 @@ def run(flow_queue, term_event, ip_config):
                 log.debug('Failed to parse IPs: {}/{}'.format(saddr, daddr))
                 log.exception(e)
                 continue
-            netstat.add((prot, saddr, sport, daddr, dport))
-            netstat_status[(prot, saddr, sport, daddr, dport)] = status
+            netstat[(prot, saddr, sport, daddr, dport)] = status
 
         if init_pass:
-            for c in netstat:
-                daddr = ipaddress.ip_address(c[3])
+            # register existing connections - don't trigger any fireflies as
+            # we don't have start_time for them
+            init_pass = False
+            for k, v in netstat.items():
+                daddr = ipaddress.ip_address(k[3])
                 if __int_ip(daddr, int_networks):
                     continue
-                if not netstat_status[c] == 'ESTABLISHED':
-                    continue
-                f_id = scitags.FlowID('ongoing', *c + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY']))
-                log.debug('   --> {}'.format(f_id))
-                flow_queue.put(f_id)
-                init_pass = False
-        if netstat_prev:
-            new_connections = netstat - netstat_prev
-            closed_connections = netstat_prev - netstat
+                netstat_index[k] = dict()
+                netstat_index[k]['status'] = v
+                netstat_index[k]['start_time'] = None
+                netstat_index[k]['end_time'] = None
+                time.sleep(scitags.settings.NETSTAT_TIMEOUT)
+                continue
 
-            for c in new_connections:
-                daddr = ipaddress.ip_address(c[3])
-                if __int_ip(daddr, int_networks):
+        for k, v in netstat.items():
+            daddr = ipaddress.ip_address(k[3])
+            if __int_ip(daddr, int_networks):
+                continue
+            if k not in netstat_index.keys() and v == 'ESTABLISHED':
+                netstat_index[k] = dict()
+                netstat_index[k]['status'] = v
+                netstat_index[k]['start_time'] = datetime.utcnow().isoformat()+'+00:00'
+                netstat_index[k]['end_time'] = None
+                f_id = scitags.FlowID('start', *k + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY'],
+                                                     netstat_index[k]['start_time']))
+                log.debug('   --> {}'.format(f_id))
+                flow_queue.put(f_id)
+            elif k in netstat_index.keys() and v in ['TIME_WAIT', 'LAST_ACK', 'FIN_WAIT1', 'FIN_WAIT2', 'CLOSING']:
+                if netstat_index[k]['end_time']:   # end_time set indicates firefly was sent already
                     continue
-                if not netstat_status[c] == 'ESTABLISHED':
+                if not netstat_index[k]['start_time']:   # start_time not set indicates it pre-dates flowd (init_pass)
                     continue
-                f_id = scitags.FlowID('start', *c + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY']))
+                netstat_index[k]['end_time'] = datetime.utcnow().isoformat()+'+00:00'
+                f_id = scitags.FlowID('end', *k + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY'],
+                                                   netstat_index[k]['start_time'], netstat_index[k]['end_time']))
                 log.debug('   --> {}'.format(f_id))
                 flow_queue.put(f_id)
 
-            for c in closed_connections:
-                daddr = ipaddress.ip_address(c[3])
-                if __int_ip(daddr, int_networks):
-                    continue
-                f_id = scitags.FlowID('end', *c + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY']))
-                log.debug('   --> {}'.format(f_id))
-                flow_queue.put(f_id)
-            # todo: fix detection of closed sockets (requires transient store for all tracked connections)
-            # for c in netstat:
-            #     daddr = ipaddress.ip_address(c[3])
-            #     if __int_ip(daddr, int_networks):
-            #         continue
-            #     if c in netstat_status.keys() and netstat_status[c] == 'TIME_WAIT':
-            #         f_id = scitags.FlowID('end', *c + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY']))
-            #         log.debug('   --> {}'.format(f_id))
-            #         flow_queue.put(f_id)
-            #         netstat.remove(c)
-        netstat_prev = netstat
+        # cleanup
+        closed_connections = set(netstat_index.keys()) - set(netstat.keys())
+        for c in closed_connections:
+            # connections where we didn't catch end state ?
+            # if netstat_index[c]['start_time'] and not netstat_index[c]['end_time']:
+            #     netstat_index[c]['end_time'] = datetime.utcnow().isoformat() + '+00:00'
+            #     f_id = scitags.FlowID('end', *c + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY'],
+            #                                        netstat_index[c]['start_time'], netstat_index[c]['end_time']))
+            #     log.debug('   --> {}'.format(f_id))
+            #     flow_queue.put(f_id)
+            netstat_index.pop(c, None)
 
         term_event.wait(scitags.settings.NETSTAT_TIMEOUT)
