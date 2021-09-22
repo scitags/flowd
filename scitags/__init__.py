@@ -25,7 +25,9 @@ class FlowIdException(Exception):
 #   inputs: (protocol, src, src_port, dst, dst_port, experiment, activity)
 # flow-update (optional)
 #   inputs: (protocol, src, src_port, dst, dst_port, experiment, activity)
-FlowID = collections.namedtuple('FlowID', ['state', 'prot', 'src', 'src_port', 'dst', 'dst_port', 'exp', 'act'])
+FlowID = collections.namedtuple('FlowID', ['state', 'prot', 'src', 'src_port', 'dst', 'dst_port', 'exp', 'act',
+                                           'start_time', 'end_time'])
+FlowID.__new__.__defaults__ = (None,) * 2   # start_time/end_time default to None
 
 
 # IP config container
