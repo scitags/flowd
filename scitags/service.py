@@ -40,6 +40,7 @@ class FlowService(object):
         self.term_event = mp.Event()
 
         header = list()
+        header.append("Flow and Packet Marking Service (scitags.org)")
         header.append("flowd v.{}: {}".format(scitags.__version__, datetime.datetime.now()))
         header.append("config: {}".format(scitags.settings.CONFIG_PATH))
         l_max = len(max(header, key=lambda x: len(x)))
