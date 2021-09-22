@@ -22,7 +22,7 @@ SYSLOG_VERSION = 1
 SYSLOG_HOSTNAME = socket.gethostname()
 SYSLOG_APP_NAME = "flowd"
 SYSLOG_PROCID = "-"
-SYSLOG_MSGID = "firefly"
+SYSLOG_MSGID = "firefly-json"
 SYSLOG_STRUCT_DATA = "-"
 
 
@@ -68,9 +68,10 @@ def firefly_json(flow_id, flow_map, ipconfig):
         },
     }
     if flow_id.state == 'start':
-        firefly['flow-lifecycle']["start-time"] = datetime.utcnow().isoformat()+'+00:00'
+        firefly['flow-lifecycle']["start-time"] = flow_id.start_time
     if flow_id.state == 'end':
-        firefly['flow-lifecycle']["end-time"] = datetime.utcnow().isoformat()+'+00:00'
+        firefly['flow-lifecycle']["start-time"] = flow_id.start_time
+        firefly['flow-lifecycle']["end-time"] = flow_id.end_time
 
     if ipconfig and afi == 'ipv6' and ipconfig.pub_ip6:
         firefly['flow-id']['src-ip'] = ipconfig.pub_ip6
