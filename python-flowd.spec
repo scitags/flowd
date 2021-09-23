@@ -35,11 +35,26 @@ Flow and Packet Marking Service (www.scitags.org)
 python setup.py build
 
 %install
-python setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+python setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-%files -f INSTALLED_FILES
+%files
 %defattr(-,root,root)
 %doc README.md
+%license LICENSE
+%{python_sitelib}/*
+%config(noreplace) /etc/flowd/flowd.cfg
+%attr(755, root, root) /usr/sbin/flowd
+/usr/lib/systemd/system/flowd.service
+
+
+%post
+%systemd_post flowd.service
+
+%preun
+%systemd_preun flowd.service
+
+%postun
+%systemd_postun_with_restart flowd.service
