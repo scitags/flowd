@@ -61,7 +61,6 @@ def get_ext_ip():
             ip_ext = get_my_ip()
         if ip_ext:
             p_ip4 = ip_ext
-            i_ip4 = i_ip4
     if i_ip6 and ipaddress.ip_address(u'{}'.format(i_ip6)).is_private:
         # todo: ip6 stun (p_ip6)
         ip_ext = get_my_ip(ip_ver=6)
