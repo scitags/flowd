@@ -2,8 +2,8 @@ import logging
 import time
 import psutil
 import ipaddress
+import pprint
 from datetime import datetime
-from pprint import pformat
 
 import scitags
 import scitags.settings
@@ -79,6 +79,7 @@ def run(flow_queue, term_event, ip_config):
                 log.exception(e)
                 continue
             netstat[(prot, saddr, sport, daddr, dport)] = status
+        log.debug(pprint.pformat(netstat))
 
         if init_pass:
             # register existing connections - don't trigger any fireflies as
@@ -108,7 +109,8 @@ def run(flow_queue, term_event, ip_config):
                                                      netstat_index[k]['start_time']))
                 log.debug('   --> {}'.format(f_id))
                 flow_queue.put(f_id)
-            elif k in netstat_index.keys() and v in ['TIME_WAIT', 'LAST_ACK', 'FIN_WAIT1', 'FIN_WAIT2', 'CLOSING']:
+            elif k in netstat_index.keys() and v in ['TIME_WAIT', 'LAST_ACK', 'FIN_WAIT1', 'FIN_WAIT2', 'CLOSING',
+                                                     'CLOSE_WAIT', 'CLOSED']:
                 if netstat_index[k]['end_time']:   # end_time set indicates firefly was sent already
                     continue
                 if not netstat_index[k]['start_time']:   # start_time not set indicates it pre-dates flowd (init_pass)
@@ -118,17 +120,19 @@ def run(flow_queue, term_event, ip_config):
                                                    netstat_index[k]['start_time'], netstat_index[k]['end_time']))
                 log.debug('   --> {}'.format(f_id))
                 flow_queue.put(f_id)
+        log.debug(pprint.pformat(netstat_index))
 
         # cleanup
         closed_connections = set(netstat_index.keys()) - set(netstat.keys())
         for c in closed_connections:
+            log.debug(closed_connections)
             # connections where we didn't catch end state ?
-            # if netstat_index[c]['start_time'] and not netstat_index[c]['end_time']:
-            #     netstat_index[c]['end_time'] = datetime.utcnow().isoformat() + '+00:00'
-            #     f_id = scitags.FlowID('end', *c + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY'],
-            #                                        netstat_index[c]['start_time'], netstat_index[c]['end_time']))
-            #     log.debug('   --> {}'.format(f_id))
-            #     flow_queue.put(f_id)
+            if netstat_index[c]['start_time'] and not netstat_index[c]['end_time']:
+                netstat_index[c]['end_time'] = datetime.utcnow().isoformat() + '+00:00'
+                f_id = scitags.FlowID('end', *c + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY'],
+                                                   netstat_index[c]['start_time'], netstat_index[c]['end_time']))
+                log.debug('   --> {}'.format(f_id))
+                flow_queue.put(f_id)
             netstat_index.pop(c, None)
 
         term_event.wait(scitags.settings.NETSTAT_TIMEOUT)
