@@ -62,7 +62,7 @@ class FlowService(object):
         else:
             self.ip_config = None
 
-        flow_api = requests.get(config['FLOW_MAP_API'])
+        flow_api = requests.get(config['FLOW_MAP_API'], verify=False)
         if flow_api.status_code != 200:
             log.error('Failed to access FLOW MAP API at {} got {}'.format(config.FLOW_MAP_API, flow_api.status_code))
             sys.exit(1)
