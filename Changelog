@@ -1,3 +1,6 @@
+* Fri Oct 01 2021 Marian Babik <marian.babik@cern.ch> 0.1.3
+- ssl verification updated
+
 * Thu Sep 23 2021 Marian Babik <marian.babik@cern.ch> 0.1.2
 - netstat: added detection of closed connections
 - increased netstat polling frequency

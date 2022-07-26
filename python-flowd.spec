@@ -1,7 +1,7 @@
 %define name python-flowd
-%define version 0.1.2
-%define unmangled_version 0.1.2
-%define unmangled_version 0.1.2
+%define version 0.1.3
+%define unmangled_version 0.1.3
+%define unmangled_version 0.1.3
 %if 0%{?rhel} == 7
   %define dist .el7
 %endif
@@ -9,7 +9,7 @@
 
 Summary: Flow and Packet Marking Service
 Name: %{name}
-Version: 0.1.2
+Version: 0.1.3
 Release: %{release}
 Source0: %{name}-%{unmangled_version}.tar.gz
 License: ASL 2.0
