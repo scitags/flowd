@@ -5,11 +5,8 @@ import argparse
 import os.path
 
 import systemd.journal
-import daemon
-import signal
 import fcntl
 import sys
-import lockfile
 
 import scitags
 import scitags.settings
@@ -24,7 +21,7 @@ def args_parser():
                         help='Specify path of the configuration file (defaults to {})'.format(
                             scitags.settings.CONFIG_PATH))
     parser.add_argument('-d', '--debug', action='store_true', help='Debug mode (implies run in foreground)')
-    parser.add_argument('-f', '--fg', action='store_true', help='Run in foreground')
+    parser.add_argument('-f', '--fg', action='store_true', default=True, help='Run in foreground (deprecated)')
     args = parser.parse_args()
 
     if args.debug:
@@ -87,26 +84,6 @@ if __name__ == "__main__":
 
     import scitags.service
     flow_service = scitags.service.FlowService(p_args)
-    context = daemon.DaemonContext(
-        working_directory=scitags.settings.WORK_DIR,
-        umask=0o002,
-        #pidfile=lock_file(scitags.settings.PID_FILE),
-        pidfile=lockfile.FileLock(scitags.settings.PID_FILE),
-    )
-
-    # config_file = open(scitag.settings.CONFIG_PATH)
-    # context.files_preserve = [config_file]
-
-    context.signal_map = {
-        signal.SIGTERM: flow_service.cleanup,
-        signal.SIGHUP: 'terminate',
-        signal.SIGUSR1: scitags.service.FlowService.reload_config(),
-    }
-
     flow_service.init_plugins()
 
-    if p_args.debug or p_args.fg:
-        flow_service.main()
-    else:
-        with context:
-            flow_service.main()
+    flow_service.main()

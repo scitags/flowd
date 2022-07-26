@@ -184,9 +184,9 @@ class FlowService(object):
         try:
             self.backend_proc.start()
             self.plugin_proc.start()
-            if self.debug:
-                signal.signal(signal.SIGINT, self.cleanup)
-                signal.signal(signal.SIGTERM, self.cleanup)
+
+            signal.signal(signal.SIGINT, self.cleanup)
+            signal.signal(signal.SIGTERM, self.cleanup)
             self.plugin_proc.join()
         except Exception as e:
             log.exception('Exception caught in main')
