@@ -13,7 +13,6 @@ import lockfile
 
 import scitags
 import scitags.settings
-import scitags.service
 
 log = logging.getLogger("scitags")
 
@@ -85,6 +84,8 @@ def lock_file(f):
 
 if __name__ == "__main__":
     p_args = args_parser()
+
+    import scitags.service
     flow_service = scitags.service.FlowService(p_args)
     context = daemon.DaemonContext(
         working_directory=scitags.settings.WORK_DIR,
