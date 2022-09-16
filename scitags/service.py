@@ -86,6 +86,19 @@ class FlowService(object):
             sys.exit(1)
         log.info('flow map registry loaded')
 
+    def check_config(self):
+        if 'netstat' in config['PLUGIN'] and 'NETSTAT_EXPERIMENT' not in config.keys() and 'NETSTAT_ACTIVITY' not in config.keys():
+            log.error("NETSTAT: netstat plugin requires NETSTAT_EXPERIMENT and NETSTAT_ACTIVITY")
+            sys.exit(-1)
+        if 'UDP_FIREFLY_NETLINK' in config.keys() and config['UDP_FIREFLY_NETLINK']:
+            try:
+                import pyroute2.netlink.diag
+                import scitags.netlink
+            except ImportError as e:
+                log.error('UDP_FIREFLY_NETLINK: import error, please check if netlink plugin package is installed')
+                log.exception(e)
+                sys.exit(-1)
+
     def init_plugins(self):
         log.debug("    Loading plugin {}".format(self.plugin))
         try:
