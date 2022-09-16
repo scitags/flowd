@@ -79,7 +79,6 @@ def run(flow_queue, term_event, ip_config):
                 log.exception(e)
                 continue
             netstat[(prot, saddr, sport, daddr, dport)] = status
-        log.debug(pprint.pformat(netstat))
 
         if init_pass:
             # register existing connections - don't trigger any fireflies as
@@ -120,12 +119,12 @@ def run(flow_queue, term_event, ip_config):
                                                    netstat_index[k]['start_time'], netstat_index[k]['end_time']))
                 log.debug('   --> {}'.format(f_id))
                 flow_queue.put(f_id)
-        log.debug(pprint.pformat(netstat_index))
 
         # cleanup
         closed_connections = set(netstat_index.keys()) - set(netstat.keys())
+        if closed_connections:
+            log.debug("  closed: {}".format(closed_connections))
         for c in closed_connections:
-            log.debug(closed_connections)
             # connections where we didn't catch end state ?
             if netstat_index[c]['start_time'] and not netstat_index[c]['end_time']:
                 netstat_index[c]['end_time'] = datetime.utcnow().isoformat() + '+00:00'
@@ -134,5 +133,9 @@ def run(flow_queue, term_event, ip_config):
                 log.debug('   --> {}'.format(f_id))
                 flow_queue.put(f_id)
             netstat_index.pop(c, None)
+        for k, v in netstat_index.items():
+            if not netstat_index[k]['start_time'] or not netstat_index[k]['end_time']:
+                continue
+            log.debug("  netstat_index: {} -> {}".format(k, v))
 
         term_event.wait(scitags.settings.NETSTAT_TIMEOUT)
