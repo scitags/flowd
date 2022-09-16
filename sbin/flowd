@@ -66,7 +66,6 @@ def args_parser():
     if not os.path.isdir(scitags.settings.WORK_DIR):
         log.warning('Missing working directory {}, will attempt to create it'.format(scitags.settings.WORK_DIR))
         os.makedirs(scitags.settings.WORK_DIR)
-
     if not os.access(scitags.settings.WORK_DIR, os.W_OK):
         log.error('Unable to write to working directory {}'.format(scitags.settings.WORK_DIR))
         sys.exit(-1)
@@ -84,6 +83,7 @@ if __name__ == "__main__":
 
     import scitags.service
     flow_service = scitags.service.FlowService(p_args)
+    flow_service.check_config()
     flow_service.init_plugins()
 
     flow_service.main()
