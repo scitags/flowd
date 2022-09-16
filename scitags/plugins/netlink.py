@@ -68,6 +68,8 @@ def run(flow_queue, term_event, ip_config):
             continue
 
         for entry in netc:
+            if 'tcp_info' not in entry:
+                continue
             prot = 'tcp'
             saddr = u'{}'.format(entry['src'])
             sport = entry['src_port']
@@ -82,7 +84,8 @@ def run(flow_queue, term_event, ip_config):
                 log.exception(e)
                 continue
             netlink[(prot, saddr, sport, daddr, dport)] = (status, entry)
-        log.debug(pprint.pformat(netlink))
+        log.debug('    netlink query: {}'.format(len(netlink)))
+        #log.debug(pprint.pformat(netlink))
 
         if init_pass:
             # register existing connections - don't trigger any fireflies as
@@ -97,18 +100,20 @@ def run(flow_queue, term_event, ip_config):
                 netlink_index[k]['start_time'] = None
                 netlink_index[k]['end_time'] = None
                 netlink_index[k]['netlink'] = v[1]
-                time.sleep(scitags.settings.NETLINK_TIMEOUT)
                 continue
+            log.debug('  netlink cache: {}'.format(len(netlink_index)))
+            time.sleep(scitags.settings.NETLINK_TIMEOUT)
 
         for k, v in netlink.items():
             daddr = ipaddress.ip_address(k[3])
             if __int_ip(daddr, int_networks):
                 continue
-            if k not in netlink_index.keys() and v == 'established':
+            if k not in netlink_index.keys() and v[0] == 'established':
                 netlink_index[k] = dict()
                 netlink_index[k]['status'] = v[0]
                 netlink_index[k]['start_time'] = datetime.utcnow().isoformat()+'+00:00'
                 netlink_index[k]['end_time'] = None
+                netlink_index[k]['netlink'] = v[1]
                 f_id = scitags.FlowID('start', *k + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY'],
                                                      netlink_index[k]['start_time'], None, netlink_index[k]['netlink']))
                 log.debug('   --> {}'.format(f_id))
@@ -116,8 +121,6 @@ def run(flow_queue, term_event, ip_config):
             elif k in netlink_index.keys() and v == 'established':
                 # update netlink info for known connections
                 netlink_index[k]['netlink'] = v[1]
-
-        log.debug(pprint.pformat(netlink_index))
 
         # cleanup
         closed_connections = set(netlink_index.keys()) - set(netlink.keys())
@@ -129,7 +132,7 @@ def run(flow_queue, term_event, ip_config):
                 f_id = scitags.FlowID('end', *c + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY'],
                                                    netlink_index[c]['start_time'], netlink_index[c]['end_time'],
                                                    netlink_index[c]['netlink']))
-                log.debug('   --> {}'.format(f_id))
+                log.debug('   <-- {}'.format(f_id))
                 flow_queue.put(f_id)
             netlink_index.pop(c, None)
 
