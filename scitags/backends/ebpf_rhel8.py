@@ -34,37 +34,58 @@ text = """
 #include <net/sock.h>
 #include <bcc/proto.h>
 #include <linux/bpf.h>
-BPF_HASH(flowlabel_table, u64, u64, 100000);
-BPF_HASH(tobedeleted, u64, u64, 100000);
+
+struct fourtuple
+{
+    u64 ip6_hi;
+    u64 ip6_lo;
+    u16 dport;
+    u16 sport;
+};
+
+
+BPF_HASH(flowlabel_table, struct fourtuple, u64, 100000);
+BPF_HASH(tobedeleted, struct fourtuple, u64, 100000);
 
 int set_flow_label(struct __sk_buff *skb)
 {
     u8 *cursor = 0;
     struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
+
     // IPv6
     if (ethernet->type == 0x86DD)
     {
         struct ip6_t *ip6 = cursor_advance(cursor, sizeof(*ip6));
 
-        u64 ip6_hi = ip6->dst_hi;
-        u64 ip6_lo = ip6->dst_lo;
+        struct fourtuple addrport;
 
-        u64 *delete = tobedeleted.lookup(&ip6_hi);
-        u64 *delete2 = tobedeleted.lookup(&ip6_lo);
+        // This is necessary for some reason to do with compiler padding
+        __builtin_memset(&addrport, 0, sizeof(addrport));
 
-        u64 *flowlabel = flowlabel_table.lookup(&ip6_hi);
-        u64 *flowlabel2 = flowlabel_table.lookup(&ip6_lo);
+        addrport.ip6_hi = ip6->dst_hi;
+        addrport.ip6_lo = ip6->dst_lo;
 
-        if (delete && delete2 && *delete == *delete2) 
+        // TCP 
+        if (ip6->next_header == 6)
         {
-            flowlabel_table.delete(&ip6_lo);
-            flowlabel_table.delete(&ip6_hi);
-            tobedeleted.delete(&ip6_lo);
-            tobedeleted.delete(&ip6_hi);
-        }
-        else if (flowlabel && flowlabel2 && *flowlabel == *flowlabel2) 
-        {
-            ip6->flow_label = *flowlabel;
+            struct tcp_t *tcp = cursor_advance(cursor, sizeof(*tcp));
+
+            addrport.dport = tcp->dst_port;
+            addrport.sport = tcp->src_port;
+
+            u64 *delete = tobedeleted.lookup(&addrport);
+
+            u64 *flowlabel = flowlabel_table.lookup(&addrport);
+
+            if (delete) 
+            {
+                flowlabel_table.delete(&addrport);
+                tobedeleted.delete(&addrport);
+            }
+            else if (flowlabel) 
+            {
+                ip6->flow_label = *flowlabel;
+            }
         }
 
         return -1;
@@ -76,6 +97,9 @@ int set_flow_label(struct __sk_buff *skb)
 }
 
 """
+
+class fourtuple(ctypes.Structure):
+    _fields_ = [("ip6_hi", ctypes.c_ulong), ("ip6_lo", ctypes.c_ulong), ("dport", ctypes.c_ushort), ("sport", ctypes.c_ushort)]
 
 # Load eBPF program
 b = BPF(text=text, debug=0)
@@ -162,15 +186,20 @@ def run(flow_queue, term_event, flow_map, ip_config):
                 ip6 = ipaddress.IPv6Address(flow_id.dst).exploded
                 ip6_hi = int(ip6[0:4] + ip6[5:9] + ip6[10:14] + ip6[15:19], 16)
                 ip6_lo = int(ip6[20:24] + ip6[25:29] + ip6[30:34] + ip6[35:39], 16)
+                dport = flow_id.dst_port
+                sport = flow_id.src_port
+
+                key = fourtuple(ip6_hi, ip6_lo, dport, sport)
                 
                 # Get the bitpattern, including entropy bits
                 flowlabel = bitpattern(exp_id, act_id)
 
                 # Fill the BPF hash with each half of the IP pointing to the flow label
-                flowlabel_table[ctypes.c_ulong(ip6_hi)] = ctypes.c_ulong(flowlabel)
-                flowlabel_table[ctypes.c_ulong(ip6_lo)] = ctypes.c_ulong(flowlabel)
+                flowlabel_table[key] = ctypes.c_ulong(flowlabel)
                 log.info(ip6 + " added to flowlabel table")
-                log.debug("flowlabel is " + str(flowlabel))
+                log.debug("Source port is " + str(sport))
+                log.debug("Destination port is " + str(dport))
+                log.debug("Flowlabel is " + str(flowlabel))
 
             except ipaddress.AddressValueError:
                 err = 'Flow label marking only possible with IPv6'
@@ -184,15 +213,20 @@ def run(flow_queue, term_event, flow_map, ip_config):
                 ip6 = ipaddress.IPv6Address(flow_id.dst).exploded
                 ip6_hi = int(ip6[0:4] + ip6[5:9] + ip6[10:14] + ip6[15:19], 16)
                 ip6_lo = int(ip6[20:24] + ip6[25:29] + ip6[30:34] + ip6[35:39], 16)
+                dport = flow_id.dst_port
+                sport = flow_id.src_port
+
+                key = fourtuple(ip6_hi, ip6_lo, dport, sport)
 
                 # Remove IP from BPF hash 
                 # This needs kernel 5.6 at least; have to do it differently for RHEL 8
                 #flowlabel_table.items_delete_batch(ip6_hi, ip6_lo)
 
                 # Remove IP from hash on C side instead of python side
-                tobedeleted[ctypes.c_ulong(ip6_hi)] = ctypes.c_ulong(flowlabel)
-                tobedeleted[ctypes.c_ulong(ip6_lo)] = ctypes.c_ulong(flowlabel)
+                tobedeleted[key] = ctypes.c_ulong(flowlabel)
                 log.info(ip6 + " removed from flowlabel table")
+                log.debug("Source port is " + str(sport))
+                log.debug("Destination port is " + str(dport))
                 
             except ipaddress.AddressValueError:
                 err = 'Flow label marking only possible with IPv6'
