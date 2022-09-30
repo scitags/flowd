@@ -116,6 +116,12 @@ else:
     log.error(err)
     raise scitags.FlowIdException(err)
 
+# Clean up, in case backend crashed last time
+try:
+    ipr.tc("del", "sfq", idx, "1:")
+except:
+    pass
+
 ipr.tc("add", "sfq", idx, "1:")
 ipr.tc("add-filter", "bpf", idx, ":1", fd=fn.fd,
    name=fn.name, parent="1:", action="ok", classid=1)
