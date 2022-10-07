@@ -2,7 +2,7 @@
 psutil==5.6.7; python_version < '3.0'
 psutil; python_version > '3.0'
 requests
-systemd-python
+# systemd-python
 pyroute2
 prometheus_client
 
