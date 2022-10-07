@@ -37,10 +37,10 @@ setup(name=NAME,
       classifiers=CLASSIFIERS,
       keywords='operations python network flow packet marking',
       packages=['scitags', 'scitags.backends', 'scitags.plugins', 'scitags.stun'],
-      install_requires=['python-daemon', 'python2-requests', 'python2-psutil', 'systemd-python'],
+      #install_requires=['python-daemon', 'python2-requests', 'python2-psutil', 'systemd-python'],
       data_files=[
           ('/usr/sbin', ['sbin/flowd']),
           ('/etc/flowd', ['etc/flowd.cfg']),
-          ('/usr/lib/systemd/system', ['etc/flowd.service']),
+          ('/usr/lib/systemd/system', ['etc/flowd@.service']),
       ]
       )
