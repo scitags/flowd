@@ -20,8 +20,12 @@ def netlink_cache_add(flow_state, src, src_port, dst, dst_port, netlink_cache):
         if 'tcp_info' not in entry.keys():
             continue
         saddr = u'{}'.format(entry['src'])
+        if '::ffff:' in saddr:
+            saddr = saddr.replace('::ffff:', '')
         sport = entry['src_port']
         daddr = u'{}'.format(entry['dst'])
+        if '::ffff:' in daddr:
+            daddr = daddr.replace('::ffff:', '')
         dport = entry['dst_port']
         if not (saddr, sport, daddr, dport) == (src, src_port, dst, dst_port):
             continue
@@ -45,8 +49,12 @@ def netlink_cache_update(netlink_cache):
         if 'tcp_info' not in entry.keys():
             continue
         saddr = u'{}'.format(entry['src'])
+        if '::ffff:' in saddr:
+            saddr = saddr.replace('::ffff:', '')
         sport = entry['src_port']
         daddr = u'{}'.format(entry['dst'])
+        if '::ffff:' in daddr:
+            daddr = daddr.replace('::ffff:', '')
         dport = entry['dst_port']
         if ('tcp', saddr, sport, daddr, dport) in netlink_cache.keys():
             status = entry['tcp_info']['state']

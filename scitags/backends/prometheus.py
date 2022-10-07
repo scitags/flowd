@@ -28,28 +28,50 @@ log = logging.getLogger('scitags')
 
 
 class FlowCollector(object):
-    def __init__(self, netlink_cache):
+    def __init__(self, netlink_cache, flow_cache, exp_index, act_index):
         self.netlink_cache = netlink_cache
+        self.flow_cache = flow_cache
+        self.exp_index = exp_index
+        self.act_index = act_index
 
     def collect(self):
-        labels = ['src', 'dst', 'exp_id', 'activity_id']
+        labels = ['src', 'dst', 'exp', 'act']
         log.debug('prometheus collect')
         log.debug(self.netlink_cache)
         for c, ci in self.netlink_cache.items():
             src = c[1]
+            src_port = c[2]
             dst = c[3]
-            e_id = '1'
-            a_id = '1'
+            dst_port = c[4]
+            log.debug(c)
+            if (src, src_port, dst, dst_port) in self.flow_cache.keys():
+                e_id, a_id = self.flow_cache[(src, src_port, dst, dst_port)]
+                exp = self.exp_index[e_id]
+                act = self.act_index[e_id][a_id]
+            else:
+                exp = 'default'
+                act = 'default'
             for k, v in ci[1]['tcp_info'].items():
                 if isinstance(v, int) and k:
-                    gauge = prometheus_client.core.GaugeMetricFamily('flow_tcp_'+k, '', labels=labels)
-                    gauge.add_metric((src, dst, e_id, a_id), v)
-                    yield gauge
+                    if any(x in k for x in ['bytes', 'segs', 'retrans']):
+                        counter = prometheus_client.core.CounterMetricFamily('flow_tcp_'+k, '', labels=labels)
+                        counter.add_metric((src, dst, exp, act), v)
+                        yield counter
+                    else:
+                        gauge = prometheus_client.core.GaugeMetricFamily('flow_tcp_'+k, '', labels=labels)
+                        gauge.add_metric((src, dst, exp, act), v)
+                        yield gauge
+            info = prometheus_client.core.InfoMetricFamily('flow_tcp_ca', '', labels=labels)
+            info.add_metric((src, dst, exp, act), {'cong_algo': ci[1]['cong_algo']})
+            info.add_metric((src, dst, exp, act), {'opts': ' '.join(ci[1]['tcp_info']['opts'])})
+            yield info
                 #else:
-                #    info = prometheus_client.core.InfoMetricFamily('flow_tcp_'+k, '', labels=labels)
+                #    info = prometheus_client.core.InfoMetricFamily('flow_tcp_', '', labels=labels)
                 #    log.debug(k, v)
-                #    info.add_metric((src, dst, e_id, a_id), v)
+                #    info.add_metric((src, dst, e_id, a_id), {k: v})
                 #    yield info
+                # flow_id = prometheus_client.core.InfoMetricFamily('flow_tcp_', '', labels=labels)
+                # info.add_metric((src, dst, e_id, a_id), {'experiment' : flow_map[e_id]})
             #info = prometheus_client.core.InfoMetricFamily('flow_tcp_cong_algo', '', labels=labels)
             #info.add_metric((src, dst, e_id, a_id), ci[1]['cong_algo'])
             #yield info
@@ -62,9 +84,18 @@ def run(flow_queue, term_event, flow_map, ip_config):
         port = scitags.settings.PROMETHEUS_SRV_PORT
     prometheus_client.start_http_server(port)
     netlink_cache = dict()
+    flow_cache = dict()
+    # flow_map indexes
+    exp_index = {y: x for x, y in flow_map['experiments'].items()}
+    act_index = dict()
+    for k, v in flow_map['activities'].items():
+        act_index[k] = {y: x for x, y in v.items()}
+    log.debug(exp_index)
+    log.debug(act_index)
+    # create another dict that holds flow to exp+act mapping 
     netlink_plugin = 'netlink' in config['PLUGIN']
     init_done = False
-    prometheus_client.core.REGISTRY.register(FlowCollector(netlink_cache))
+    prometheus_client.core.REGISTRY.register(FlowCollector(netlink_cache, flow_cache, exp_index, act_index))
     log.debug('prometheus client started on 0.0.0.0:{}'.format(port))
     log.debug('entering event loop')
     while not term_event.is_set():
@@ -74,6 +105,7 @@ def run(flow_queue, term_event, flow_map, ip_config):
             if not netlink_plugin and init_done:
                 scitags.netlink.cache.netlink_cache_update(netlink_cache)
             continue
+        log.debug(flow_id)
 
         if 'start' in flow_id.state and flow_id.netlink:
             init_done = True
@@ -85,9 +117,12 @@ def run(flow_queue, term_event, flow_map, ip_config):
             init_done = True
             scitags.netlink.cache.netlink_cache_add(flow_id.state, flow_id.src, flow_id.src_port, flow_id.dst,
                                                     flow_id.dst_port, netlink_cache)
+            flow_cache[(flow_id.src, flow_id.src_port, flow_id.dst, flow_id.dst_port)] = (flow_id.exp, flow_id.act)
         elif 'end' in flow_id.state and not flow_id.netlink:
             scitags.netlink.cache.netlink_cache_del(flow_id.src, flow_id.src_port, flow_id.dst,
                                                     flow_id.dst_port, netlink_cache)
+            if (flow_id.src, flow_id.src_port, flow_id.dst, flow_id.dst_port) in flow_cache.keys():
+                del flow_cache[(flow_id.src, flow_id.src_port, flow_id.dst, flow_id.dst_port)]
 
 
 
