@@ -11,6 +11,9 @@ import sys
 import scitags
 import scitags.settings
 
+import socket
+import requests.packages.urllib3.util.connection as urllib3_cn
+
 log = logging.getLogger("scitags")
 
 
@@ -77,9 +80,14 @@ def lock_file(f):
     if f.writable():
         fcntl.lockf(f, fcntl.LOCK_EX)
 
+def allowed_gai_family():
+    family = socket.AF_INET
+    return family
+
 
 if __name__ == "__main__":
     p_args = args_parser()
+    urllib3_cn.allowed_gai_family = allowed_gai_family
 
     import scitags.service
     flow_service = scitags.service.FlowService(p_args)

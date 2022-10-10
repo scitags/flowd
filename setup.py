@@ -36,7 +36,7 @@ setup(name=NAME,
       url=URL,
       classifiers=CLASSIFIERS,
       keywords='operations python network flow packet marking',
-      packages=['scitags', 'scitags.backends', 'scitags.plugins', 'scitags.stun'],
+      packages=['scitags', 'scitags.backends', 'scitags.plugins', 'scitags.stun', 'scitags.netlink'],
       #install_requires=['python-daemon', 'python2-requests', 'python2-psutil', 'systemd-python'],
       data_files=[
           ('/usr/sbin', ['sbin/flowd']),
