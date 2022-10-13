@@ -6,7 +6,7 @@ except ImportError:
 import prometheus_client
 import prometheus_client.core
 
-import scitags.netlink.cache
+import scitags.netlink.cache_ss
 import scitags.settings
 from scitags.config import config
 
@@ -52,7 +52,7 @@ class FlowCollector(object):
                 exp = 'default'
                 act = 'default'
             for k, v in ci[1]['tcp_info'].items():
-                if isinstance(v, int) and k:
+                if isinstance(v, (int, float)) and k:
                     if any(x in k for x in ['bytes', 'segs', 'retrans']):
                         counter = prometheus_client.core.CounterMetricFamily('flow_tcp_'+k, '', labels=labels)
                         counter.add_metric((src, dst, exp, act), v)
@@ -62,7 +62,7 @@ class FlowCollector(object):
                         gauge.add_metric((src, dst, exp, act), v)
                         yield gauge
             info = prometheus_client.core.InfoMetricFamily('flow_tcp_ca', '', labels=labels)
-            info.add_metric((src, dst, exp, act), {'cong_algo': ci[1]['cong_algo']})
+            #info.add_metric((src, dst, exp, act), {'cong_algo': ci[1]['cong_algo']})
             info.add_metric((src, dst, exp, act), {'opts': ' '.join(ci[1]['tcp_info']['opts'])})
             yield info
                 #else:
@@ -90,8 +90,6 @@ def run(flow_queue, term_event, flow_map, ip_config):
     act_index = dict()
     for k, v in flow_map['activities'].items():
         act_index[k] = {y: x for x, y in v.items()}
-    log.debug(exp_index)
-    log.debug(act_index)
     # create another dict that holds flow to exp+act mapping 
     netlink_plugin = 'netlink' in config['PLUGIN']
     init_done = False
@@ -100,10 +98,10 @@ def run(flow_queue, term_event, flow_map, ip_config):
     log.debug('entering event loop')
     while not term_event.is_set():
         try:
-            flow_id = flow_queue.get(block=True, timeout=0.5)
+            flow_id = flow_queue.get(block=True, timeout=5)
         except queue.Empty:
             if not netlink_plugin and init_done:
-                scitags.netlink.cache.netlink_cache_update(netlink_cache)
+                scitags.netlink.cache_ss.netlink_cache_update(netlink_cache)
             continue
         log.debug(flow_id)
 
@@ -115,11 +113,11 @@ def run(flow_queue, term_event, flow_map, ip_config):
             del netlink_cache[(flow_id.src, flow_id.src_port, flow_id.dst, flow_id.dst_port)]
         elif 'start' in flow_id.state and not flow_id.netlink:
             init_done = True
-            scitags.netlink.cache.netlink_cache_add(flow_id.state, flow_id.src, flow_id.src_port, flow_id.dst,
+            scitags.netlink.cache_ss.netlink_cache_add(flow_id.state, flow_id.src, flow_id.src_port, flow_id.dst,
                                                     flow_id.dst_port, netlink_cache)
             flow_cache[(flow_id.src, flow_id.src_port, flow_id.dst, flow_id.dst_port)] = (flow_id.exp, flow_id.act)
         elif 'end' in flow_id.state and not flow_id.netlink:
-            scitags.netlink.cache.netlink_cache_del(flow_id.src, flow_id.src_port, flow_id.dst,
+            scitags.netlink.cache_ss.netlink_cache_del(flow_id.src, flow_id.src_port, flow_id.dst,
                                                     flow_id.dst_port, netlink_cache)
             if (flow_id.src, flow_id.src_port, flow_id.dst, flow_id.dst_port) in flow_cache.keys():
                 del flow_cache[(flow_id.src, flow_id.src_port, flow_id.dst, flow_id.dst_port)]
