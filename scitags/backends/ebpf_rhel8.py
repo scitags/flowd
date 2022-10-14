@@ -20,6 +20,8 @@ import scitags.settings
 
 from bcc import BPF
 from pyroute2 import IPRoute
+from pyroute2.netlink import NetlinkError
+
 import ctypes
 import socket
 import ipaddress
@@ -119,7 +121,7 @@ else:
 # Clean up, in case backend crashed last time
 try:
     ipr.tc("del", "sfq", idx, "1:")
-except:
+except NetlinkError:
     pass
 
 ipr.tc("add", "sfq", idx, "1:")
