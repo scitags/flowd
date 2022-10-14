@@ -109,7 +109,7 @@ def parse_ss(ss_stdout):
             elif 'sndbuf_limited:' in e:
                 tcpi_entry['sndbuf_limited'] = int(e.split(':')[1].split('(')[0].replace('ms', ''))
             elif 'wscale' in e:
-                tcpi_entry['opts'].append(e+':'+v)
+                tcpi_entry['opts'].append(e)
             elif ':' in e:
                 k, v = e.split(':')
                 v = v.replace('ms', '')
