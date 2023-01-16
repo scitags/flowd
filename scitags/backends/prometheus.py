@@ -35,7 +35,7 @@ class FlowCollector(object):
         self.act_index = act_index
 
     def collect(self):
-        labels = ['src', 'dst', 'exp', 'act']
+        labels = ['src', 'dst', 'exp', 'act', 'flow']
         log.debug('prometheus collect')
         log.debug(self.netlink_cache)
         for c, ci in self.netlink_cache.items():
@@ -43,6 +43,7 @@ class FlowCollector(object):
             src_port = c[2]
             dst = c[3]
             dst_port = c[4]
+            flow = "{}:{}".format(src_port, dst_port)
             log.debug(c)
             if (src, src_port, dst, dst_port) in self.flow_cache.keys():
                 e_id, a_id = self.flow_cache[(src, src_port, dst, dst_port)]
@@ -55,15 +56,15 @@ class FlowCollector(object):
                 if isinstance(v, (int, float)) and k:
                     if any(x in k for x in ['bytes', 'segs', 'retrans']):
                         counter = prometheus_client.core.CounterMetricFamily('flow_tcp_'+k, '', labels=labels)
-                        counter.add_metric((src, dst, exp, act), v)
+                        counter.add_metric((src, dst, exp, act, flow), v)
                         yield counter
                     else:
                         gauge = prometheus_client.core.GaugeMetricFamily('flow_tcp_'+k, '', labels=labels)
-                        gauge.add_metric((src, dst, exp, act), v)
+                        gauge.add_metric((src, dst, exp, act, flow), v)
                         yield gauge
             info = prometheus_client.core.InfoMetricFamily('flow_tcp_ca', '', labels=labels)
             #info.add_metric((src, dst, exp, act), {'cong_algo': ci[1]['cong_algo']})
-            info.add_metric((src, dst, exp, act), {'opts': ' '.join(ci[1]['tcp_info']['opts'])})
+            info.add_metric((src, dst, exp, act, flow), {'opts': ' '.join(ci[1]['tcp_info']['opts'])})
             yield info
                 #else:
                 #    info = prometheus_client.core.InfoMetricFamily('flow_tcp_', '', labels=labels)
