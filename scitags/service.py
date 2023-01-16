@@ -40,7 +40,8 @@ class FlowService(object):
             self.debug = True
         else:
             self.debug = False
-        self.flow_id_queue = mp.Queue()
+        #self.flow_id_queue = mp.Queue()
+        self.flow_id_bus = scitags.PubSubQueue()
         self.term_event = mp.Event()
 
         header = list()
@@ -152,15 +153,16 @@ class FlowService(object):
         log.info('caught signal {}'.format(sig))
         self.term_event.set()
 
-        while True:
-            try:
-                self.flow_id_queue.get(block=False)
-            except queue.Empty:
-                break
-            except ValueError:
-                break
-        self.flow_id_queue.close()
-        self.flow_id_queue.join_thread()
+        self.flow_id_bus.close()
+        #while True:
+        #    try:
+        #        self.flow_id_queue.get(block=False)
+        #    except queue.Empty:
+        #        break
+        #    except ValueError:
+        #        break
+        #self.flow_id_queue.close()
+        #self.flow_id_queue.join_thread()
 
         if self.plugin_proc and self.plugin_proc.is_alive():
             self.plugin_proc.join(5)
@@ -194,11 +196,11 @@ class FlowService(object):
         # 3. watch plugin and backend pools until they finish
         log.info('entering main loop')
         for bm in self.backend_mod:
-            bpi = mp.Process(target=bm.run, args=(self.flow_id_queue, self.term_event, self.flow_map, self.ip_config))
+            bpi = mp.Process(target=bm.run, args=(self.flow_id_bus.register(), self.term_event, self.flow_map, self.ip_config))
             bpi.daemon = True
             self.backend_proc.append(bpi)
         self.plugin_proc = mp.Process(target=self.plugin_mod.run,
-                                      args=(self.flow_id_queue, self.term_event, self.ip_config))
+                                      args=(self.flow_id_bus, self.term_event, self.ip_config))
         self.plugin_proc.daemon = True
 
         try:
