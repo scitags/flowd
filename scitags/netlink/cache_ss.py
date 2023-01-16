@@ -119,8 +119,10 @@ def parse_ss(ss_stdout):
                     tcpi_entry[k] = v
                 elif '/' in v:
                     tcpi_entry[k] = int(v.split('/')[1])
-                else:
+                elif v:
                     tcpi_entry[k] = int(v)
+                else:
+                    tcpi_entry[k] = v
             elif 'rate' in e:
                 tcpi_entry[e] = int(tcpi[tcpi.index(e)+1].replace('bps', ''))
             elif e == 'send':
