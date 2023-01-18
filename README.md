@@ -31,8 +31,8 @@ Containerised version of the flowd is currently provided as the only official di
 
 and can be started with:
 ```shell
-# docker run --privileged --network=host -d [-v /<local_fork_path>/flowd:/usr/src/app] [-v <config_path>:/etc/flowd] \
-           <image>:<tag>  
+# docker run --privileged --network=host -d [-v /<local_fork_path>/flowd:/usr/src/app] 
+            [-v <config_path>:/etc/flowd] <image>:<tag>  
 ```
 
 Before staring the service an initial configuration needs to be mounted under /etc/flowd/flowd.cfg 
@@ -79,7 +79,7 @@ FLOW_MAP_API='<url>'
 
 ### Plugins Reference
 
-#### np_api
+#### NP_API
 ##### Function
 This plugin creates a named pipe which can be used to submit information about a network flow from another process. It expects a space separated entry followed by a new line (one line per flow) with the following syntax:
 ```shell
@@ -106,7 +106,7 @@ A sample interaction would like this:
 # echo "end tcp 192.168.0.1 2345 192.168.0.2 5777 1 2" > /var/run/flowd
 ```
 
-#### firefly
+#### FIREFLY
 ##### Function
 This plugin listens for incoming UDP fireflies, parses the information it contains and creates a new event which is sent to the backend(s). 
 
@@ -123,7 +123,7 @@ FIREFLY_LISTENER_HOST="0.0.0.0"
 FIREFLY_LISTENER_PORT=10514
 ```
 
-#### netstat
+#### NETSTAT
 ##### Function
 This plugin scans existing network connections on the host using netstat, creates event for each and assigns it the configured science domain and activity.
 
@@ -148,7 +148,7 @@ NETSTAT_ACTIVITY=1
 NETSTAT_INTERNAL_NETWORKS=('192.168.0.0/16')
 ```
 
-#### netlink
+#### NETLINK
 ##### Function
 This plugin scans existing network connections on the host using netlink, creates event for each and assigns it the configured science domain and activity.
 
@@ -166,7 +166,7 @@ NETLINK_TIMEOUT - time to wait between scans (poll time) - only via settings
 NETLINK_TIMEOUT=2
 ```
 
-#### iperf
+#### IPERF
 ##### Function
 This plugin scans existing network connections on the host using netstat, filters iperf connections, creates event for each and assigns them science domain and activity from a pre-configured set at random (This plugin is experimental).
 
@@ -184,7 +184,7 @@ NETSTAT_TIMEOUT=2
 
 ### Backends Reference
 
-#### udp_firefly
+#### UDP_FIREFLY
 ##### Function
 This backend implements UDP firefly flow marking. For each event triggered by a plugin it sends a UDP packet with the information about the corresponding science domain and activity. 
 
@@ -199,7 +199,7 @@ UDP_FIREFLY_NETLINK - add netlink information (scan connections via netlink, ret
                       particular connection and add it to the UDP packet).
 ```
 
-#### ebpf_el8/ebpf_el9
+#### EPBF_EL8/EBPF_EL9
 ##### Function
 This backend implements packet marking, it uses eBPF-TC to encode science domain and activity in the IPv6 packet flow label field. Note that this backend requires kernel headers, bcc (ebpf libs) and a working compiler as it will compile and load eBPF-TC program in the kernel.
 ebpf_el8 backend should work on RHEL8 compatible systems; ebpf_el9 backend should work on RHEL9 compatible systems. Both backends require at least kernel 4.4+ to work.
@@ -222,7 +222,8 @@ def init():
   # used to run any initialisation required (check config sanity, etc.)
   
 def run(flow_queue, term_event, ip_config):
-  # Implements a particular way to identify network flow and assigns it a science domain and activity.
+  # Implements a particular way to identify network flow and assigns it a  
+  # science domain and ctivity.
   # Sends scitags.FlowID object via flow_queue to the backend(s)
   #
   # Parameters:
