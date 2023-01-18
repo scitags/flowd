@@ -232,8 +232,8 @@ def run(flow_queue, term_event, ip_config):
   #
   while not term_event.is_set():
       # implementation to determine flow_id (see scitags.FlowID for details)
-      flow_id = scitags.FlowID(flow_state, proto, src, src_port, dst, dst_port, exp_id, activity_id,
-                                     start_time, end_time, netlink)
+      flow_id = scitags.FlowID(flow_state, proto, src, src_port, dst, dst_port, 
+                               exp_id, activity_id, start_time, end_time, netlink)
       flow_queue.put(flow_id)
 
 ```
