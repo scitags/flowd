@@ -2,9 +2,9 @@
 
 **flowd** is a network flow and packet marking service developed in Python (based on the [technical specification](https://docs.google.com/document/d/1x9JsZ7iTj44Ta06IHdkwpv5Q2u4U2QGLWnUeN2Zf5ts/edit)).
 It provides a pluggable system to test different flow and packet marking strategies using  *plugins* to get the flow 
-identifiers and a set of *backends* that implement the actual marking. In the base case **flowd** is used to mark packets or network flows for a third party system/process (storage or transfer service). It uses *plugins* to identify the network flows to mark and determine what science domain and activity to use and *backends* to determine how exaclty these flows should be marked. 
+identifiers and a set of *backends* that implement the actual marking. In the base case **flowd** is used to mark packets or network flows for a third party system/process (storage or transfer service). It uses *plugins* to identify the network flows to mark and determine what science domain and activity to use and *backends* to determine how exactly these flows should be marked. 
 
-The framework is extensible and can be used to implement other use cases. Plugins and backends can be combined to create complex functionality, they run in parallel and are synchronised using a pub/sub queue. There is an initial support for systemd/journal integration (Linux daemon), docker image and development environment, STUN/TURN IP detection and configuration.  
+The framework is extensible and can be used to implement other use cases. Plugins and backends can be combined to create complex functionality. There is also an initial support for systemd/journal integration (Linux daemon), docker image and development environment, STUN/TURN IP detection and configuration.  
 
 The following *plugins* are currently available:
 - **np_api** - simple API which accepts flow identifiers via named pipe
@@ -42,7 +42,7 @@ To start the service run:
 # sbin/flowd --debug [-c <config_path>]
 ```
 
-To run **flowd** as a system service, you can install it as any other python package and integrate it via systemd as follows:
+To run **flowd** as a systemd service, you can install it as any other python package and integrate it via systemd as follows:
 ```shell
 # python setup.py install
 # cp etc/flowd.cfg /etc/flowd/flowd-tags.cfg (edit the config)
@@ -125,25 +125,93 @@ FIREFLY_LISTENER_PORT=10514
 
 #### netstat
 ##### Function
-This plugin scans existing network connections on the host, creates event for each and assigns it the configured science domain and activity. 
+This plugin scans existing network connections on the host using netstat, creates event for each and assigns it the configured science domain and activity.
 
 ##### Parameters
 
 ```shell
-NETSTAT_EXPERIMENT - science domain id to use (for all events)
+NETSTAT_EXPERIMENT - science domain id to use (for all events) 
 NETSTAT_ACTIVITY - activity id (for all events)
-NETSTAT_INTERNAL_NETWORKS - 
+NETSTAT_INTERNAL_NETWORKS - list of destination networks to ignore
 NETSTAT_TIMEOUT - time to wait between scans (poll time) - only via settings
-
 ```
 
 ##### Defaults
 ```shell
-FIREFLY_LISTENER_HOST="0.0.0.0"
-FIREFLY_LISTENER_PORT=10514
+NETSTAT_TIMEOUT=2
+```
+
+##### Example
+```shell
+NETSTAT_EXPERIMENT=1
+NETSTAT_ACTIVITY=1
+NETSTAT_INTERNAL_NETWORKS=('192.168.0.0/16')
+```
+
+#### netlink
+##### Function
+This plugin scans existing network connections on the host using netlink, creates event for each and assigns it the configured science domain and activity.
+
+##### Parameters
+
+```shell
+NETLINK_EXPERIMENT - science domain id to use (for all events) 
+NETLINK_ACTIVITY - activity id (for all events)
+NETLINK_INTERNAL_NETWORKS - list of destination networks to ignore (see netstat)
+NETLINK_TIMEOUT - time to wait between scans (poll time) - only via settings
+```
+
+##### Defaults
+```shell
+NETLINK_TIMEOUT=2
+```
+
+#### iperf
+##### Function
+This plugin scans existing network connections on the host using netstat, filters iperf connections, creates event for each and assigns them science domain and activity from a pre-configured set at random (This plugin is experimental).
+
+##### Parameters
+
+```shell
+IPERF_FLOW_ID - list of tuples with science domain and activity
+IPERF_INTERNAL_NETWORKS - list of destination networks to ignore (see netstat)
+```
+
+##### Defaults
+```shell
+NETSTAT_TIMEOUT=2
 ```
 
 ### Backends Reference
+
+#### udp_firefly
+##### Function
+This backend implements UDP firefly flow marking. For each event triggered by a plugin it sends a UDP packet with the information about the corresponding science domain and activity. 
+
+##### Parameters
+
+```shell
+IP_DISCOVERY_ENABLED - Attempts to detect source IP via STUN server (can be further tuned via settings). IP discovered will be used as a source in the UDP firefly metadata
+UDP_FIREFLY_IP4_SRC - IPv4 address to be used as a source in the UDP firefly metadata 
+UDP_FIREFLY_IP6_SRC - IPv6 address to be used as a source in the UDP firefly metadata
+UDP_FIREFLY_NETLINK - add netlink information (scan connections via netlink, retrieve information for particular connection and add it to the UDP packet).
+```
+
+#### ebpf_el8/ebpf_el9
+##### Function
+This backend implements packet marking, it uses eBPF-TC to encode science domain and activity in the IPv6 packet flow label field. Note that this backend requires kernel headers, bcc (ebpf libs) and a working compiler as it will compile and load eBPF-TC program in the kernel.
+ebpf_el8 backend should work on RHEL8 compatible systems; ebpf_el9 backend should work on RHEL9 compatible systems. Both backends require at least kernel 4.4+ to work.
+
+##### Parameters
+
+```shell
+NETWORK_INTERFACE - network interface on which eBPF-TC program should be loaded (required)
+```
+
+##### Example
+```shell
+NETWORK_INTERFACE='eth0'
+```
 
 ## Contribution Guide
 Extending **flowd** can be done either by implementing a new plugin or a new backend. The core *plugin* interface requires two methods:
