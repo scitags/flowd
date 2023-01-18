@@ -191,10 +191,12 @@ This backend implements UDP firefly flow marking. For each event triggered by a 
 ##### Parameters
 
 ```shell
-IP_DISCOVERY_ENABLED - Attempts to detect source IP via STUN server (can be further tuned via settings). IP discovered will be used as a source in the UDP firefly metadata
+IP_DISCOVERY_ENABLED - attempts to detect source IP via STUN server (can be further tuned via settings). 
+                       IP discovered will be used as a source in the UDP firefly metadata
 UDP_FIREFLY_IP4_SRC - IPv4 address to be used as a source in the UDP firefly metadata 
 UDP_FIREFLY_IP6_SRC - IPv6 address to be used as a source in the UDP firefly metadata
-UDP_FIREFLY_NETLINK - add netlink information (scan connections via netlink, retrieve information for particular connection and add it to the UDP packet).
+UDP_FIREFLY_NETLINK - add netlink information (scan connections via netlink, retrieve information for 
+                      particular connection and add it to the UDP packet).
 ```
 
 #### ebpf_el8/ebpf_el9
