@@ -46,7 +46,7 @@ To run **flowd** as a systemd service, you can install it as any other python pa
 ```shell
 # python setup.py install
 # cp etc/flowd.cfg /etc/flowd/flowd-tags.cfg (edit the config)
-# cp etc/flowd@.service /etc/systemd/system/ (note that this directory is os specific)
+# cp etc/flowd@.service /etc/systemd/system/ (systemd directory can be os specific)
 # systemctl daemon-reload
 # systemctl enable flowd@tags
 # systemctl start flowd@tags
@@ -73,7 +73,7 @@ PLUGIN='netstat'
 BACKEND='udp_firefly,prometheus'
 FLOW_MAP_API='<url>'
 ```
-- PLUGIN - refers to the name of the plugin that should be enabled (only plugin can be enabled)
+- PLUGIN - plugin that should be enabled (only one plugin can be specified)
 - BACKEND - comma separated list of backends to enable 
 - FLOW_MAP_API - URL with a list of science domains and activities (see technical spec for json schema and examples)
 
