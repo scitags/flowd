@@ -1,6 +1,6 @@
 # Network flow and packet marking service
 
-**flowd** is a network flow and packet marking service developed in Python (based on the [Scitags](https://www.scitags.org/) project [technical specification](https://docs.google.com/document/d/1x9JsZ7iTj44Ta06IHdkwpv5Q2u4U2QGLWnUeN2Zf5ts/edit)).
+**flowd** is a network flow and packet marking service developed in Python (based on the [technical specification](https://docs.google.com/document/d/1x9JsZ7iTj44Ta06IHdkwpv5Q2u4U2QGLWnUeN2Zf5ts/edit) of the [Scitags](https://www.scitags.org/) project).
 It provides a pluggable system for testing different flow and packet marking strategies, using *plugins* to retrieve flow identifiers and a set of *backends* to implement the actual marking. In the base case, **flowd** is used to tag packets or network flows for a third party system/process (storage or transfer service). It uses *plugins* to identify the network flows and determine which science domain and activity to use, and *backends* to determine how exactly these flows should be tagged.
 
 The framework is extensible and can be used to implement other use cases. Plugins and backends can be combined to create complex functionality. There is also an initial support for systemd/journal integration (Linux daemon), Docker image and development environment, STUN/TURN IP detection and configuration.  
