@@ -2,6 +2,9 @@ import logging
 import subprocess
 import re
 
+from scitags.config import config
+import scitags.settings
+
 log = logging.getLogger('scitags')
 
 SKMEM = ('rmem_alloc', 'rcv_buf', 'wmem_allow', 'snd_buf', 'fwd_alloc', 'wmem_queued', 'opt_mem', 'back_log', 'sock_drop')
@@ -18,9 +21,10 @@ TCP_STATES = {'ESTAB': "established",
               'LISTEN': "listening",
               'CLOSING': "closing"}
 
+
 def ss(ss_path='/usr/sbin/ss'):
     try:
-        p = subprocess.run([ss_path,'-iotnmH'], timeout=5, capture_output=True)
+        p = subprocess.run([ss_path, '-iotnmH'], timeout=5, capture_output=True)
         p.check_returncode()
     except subprocess.TimeoutExpired as e:
         log.exception(e)
@@ -58,7 +62,7 @@ def parse_ip(hdrs):
     if '::ffff:' in dst_raw:
         dst = dst.replace('::ffff:', '')
 
-    return (src, src_port, dst, dst_port)
+    return src, src_port, dst, dst_port
 
 
 def parse_ss(ss_stdout):
@@ -159,7 +163,8 @@ def netlink_cache_update(netlink_cache):
     if not netlink_cache:     # if cache is empty there is nothing to update
         return
     try:
-        netc = parse_ss(ss())
+        ss_path = config.get('PROMETHEUS_SS_PATH', scitags.settings.SS_PATH)
+        netc = parse_ss(ss(ss_path=ss_path))
     except Exception as e:
         log.exception('Exception caught while querying netlink')
         return

@@ -3,11 +3,13 @@ try:
     import queue
 except ImportError:
     import Queue as queue
+import os.path
 import prometheus_client
 import prometheus_client.core
 
 import scitags.netlink.cache_ss
 import scitags.settings
+from scitags import FlowConfigException
 from scitags.config import config
 
 log = logging.getLogger('scitags')
@@ -83,6 +85,9 @@ def run(flow_queue, term_event, flow_map, ip_config):
         port = config['PROMETHEUS_SRV_PORT']
     else:
         port = scitags.settings.PROMETHEUS_SRV_PORT
+    if not os.path.isfile(scitags.settings.SS_PATH):
+        if 'PROMETHEUS_SS_PATH' in config.keys() and not os.path.isfile(config['PROMETHEUS_SS_PATH']):
+            raise FlowConfigException('Unable to find ss, please check config')
     prometheus_client.start_http_server(port)
     netlink_cache = dict()
     flow_cache = dict()
