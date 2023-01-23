@@ -20,8 +20,6 @@ import scitags.settings
 
 from bcc import BPF
 from pyroute2 import IPRoute
-from pyroute2.netlink import NetlinkError
-
 import ctypes
 import socket
 import ipaddress
@@ -67,7 +65,7 @@ int set_flow_label(struct __sk_buff *skb)
         addrport.ip6_hi = ip6->dst_hi;
         addrport.ip6_lo = ip6->dst_lo;
 
-        // TCP 
+        // TCP
         if (ip6->next_header == 6)
         {
             struct tcp_t *tcp = cursor_advance(cursor, sizeof(*tcp));
@@ -79,12 +77,12 @@ int set_flow_label(struct __sk_buff *skb)
 
             u64 *flowlabel = flowlabel_table.lookup(&addrport);
 
-            if (delete) 
+            if (delete)
             {
                 flowlabel_table.delete(&addrport);
                 tobedeleted.delete(&addrport);
             }
-            else if (flowlabel) 
+            else if (flowlabel)
             {
                 ip6->flow_label = *flowlabel;
             }
@@ -100,16 +98,21 @@ int set_flow_label(struct __sk_buff *skb)
 
 """
 
+
 class fourtuple(ctypes.Structure):
     _fields_ = [("ip6_hi", ctypes.c_ulong), ("ip6_lo", ctypes.c_ulong), ("dport", ctypes.c_ushort), ("sport", ctypes.c_ushort)]
 
+
 # Load eBPF program
+log.debug('Loading eBPF')
 b = BPF(text=text, debug=0)
 flowlabel_table = b.get_table('flowlabel_table')
 tobedeleted = b.get_table('tobedeleted')
 fn = b.load_func("set_flow_label", BPF.SCHED_CLS)
+log.debug('eBPF load completed')
 
 # Attach to network interface (get from config)
+log.debug('Attaching to network interface {}'.format(config['NETWORK_INTERFACE']))
 if 'NETWORK_INTERFACE' in config.keys():
     interface = config['NETWORK_INTERFACE']
     idx = ipr.link_lookup(ifname=interface)[0]
@@ -117,16 +120,19 @@ else:
     err = 'eBPF backend requires network interface to be specified'
     log.error(err)
     raise scitags.FlowIdException(err)
+log.debug('eBPF attached')
 
 # Clean up, in case backend crashed last time
 try:
     ipr.tc("del", "sfq", idx, "1:")
-except NetlinkError:
+except:
     pass
 
 ipr.tc("add", "sfq", idx, "1:")
 ipr.tc("add-filter", "bpf", idx, ":1", fd=fn.fd,
    name=fn.name, parent="1:", action="ok", classid=1)
+log.debug('ipr.tc add-filter success')
+
 
 # Function to put together flow label including entropy bits
 def bitpattern(exp_id, act_id):
@@ -141,7 +147,7 @@ def bitpattern(exp_id, act_id):
         exp_id_swapped = exp_id_swapped + exp_id[i]
 
     exp_id = exp_id_swapped
-    
+
     # Packet marking specification wants 3 random numbers
     # First is two bits, second is one bit, third is two bits
     random1 = random.randrange(4)
@@ -152,11 +158,15 @@ def bitpattern(exp_id, act_id):
     random3 = format(random3, '#04b')
 
     # Stitch the 20-digit binary number together, Frankenstyle
+    log.debug('flow binary: 00'+exp_id[2:]+'0'+act_id[2:]+'00')
+    log.debug('flow decimal: {}'.format(int('00'+exp_id[2:]+'0'+act_id[2:]+'00', 2)))
     flowlabel = random1 + exp_id[2:] + random2[2:] + act_id[2:] + random3[2:]
+    log.debug(hex(int(flowlabel, 2)))
 
     # Return as integer
     return int(flowlabel, 2)
-    
+
+
 def run(flow_queue, term_event, flow_map, ip_config):
     # Stolen from udp_firefly backend
     while not term_event.is_set():
@@ -166,31 +176,17 @@ def run(flow_queue, term_event, flow_map, ip_config):
             continue
 
         if flow_id.state == "start":
-            if flow_id.exp not in flow_map['experiments'].keys():
-                err = 'Failed to map experiment ({}) to id'.format(flow_id.exp)
-                log.error(err)
-
-                # Clean up, or backend won't be able to restart
-                ipr.tc("del", "sfq", idx, "1:")
-                raise scitags.FlowIdException(err)
-
-            exp_id = flow_map['experiments'][flow_id.exp]
+            exp_id = flow_id.exp
 
             if not flow_id.act:
                 act_id = 0
-            elif flow_id.act in flow_map['activities'][exp_id].keys():
-                act_id = flow_map['activities'][exp_id][flow_id.act]
             else:
-                err = 'Failed to map activity ({}/{}) to id'.format(flow_id.exp, flow_id.act)
-                log.error(err)
-
-                # Clean up, or backend won't be able to restart
-                ipr.tc("del", "sfq", idx, "1:")
-                raise scitags.FlowIdException(err)
+                act_id = flow_id.act
 
             # New stuff starts here
             try:
                 # Need to break up the IPv6 address into halves
+                log.debug(flow_id)
                 ip6 = ipaddress.IPv6Address(flow_id.dst).exploded
                 ip6_hi = int(ip6[0:4] + ip6[5:9] + ip6[10:14] + ip6[15:19], 16)
                 ip6_lo = int(ip6[20:24] + ip6[25:29] + ip6[30:34] + ip6[35:39], 16)
@@ -198,7 +194,7 @@ def run(flow_queue, term_event, flow_map, ip_config):
                 sport = flow_id.src_port
 
                 key = fourtuple(ip6_hi, ip6_lo, dport, sport)
-                
+
                 # Get the bitpattern, including entropy bits
                 flowlabel = bitpattern(exp_id, act_id)
 
@@ -216,7 +212,7 @@ def run(flow_queue, term_event, flow_map, ip_config):
                 # I don't think we want the backend to crash here?
                 #raise scitags.FlowIdException(err)
 
-        elif flow_id.state == "end": 
+        elif flow_id.state == "end":
             try:
                 ip6 = ipaddress.IPv6Address(flow_id.dst).exploded
                 ip6_hi = int(ip6[0:4] + ip6[5:9] + ip6[10:14] + ip6[15:19], 16)
@@ -226,7 +222,7 @@ def run(flow_queue, term_event, flow_map, ip_config):
 
                 key = fourtuple(ip6_hi, ip6_lo, dport, sport)
 
-                # Remove IP from BPF hash 
+                # Remove IP from BPF hash
                 # This needs kernel 5.6 at least; have to do it differently for RHEL 8
                 #flowlabel_table.items_delete_batch(ip6_hi, ip6_lo)
 
@@ -235,7 +231,7 @@ def run(flow_queue, term_event, flow_map, ip_config):
                 log.info(ip6 + " removed from flowlabel table")
                 log.debug("Source port is " + str(sport))
                 log.debug("Destination port is " + str(dport))
-                
+
             except ipaddress.AddressValueError:
                 err = 'Flow label marking only possible with IPv6'
                 log.error(err)
