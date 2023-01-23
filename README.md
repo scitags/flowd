@@ -214,6 +214,82 @@ NETWORK_INTERFACE - network interface on which eBPF-TC program should be loaded 
 NETWORK_INTERFACE='eth0'
 ```
 
+#### PROMETHEUS
+##### Function
+This backend exposes network flows visible to flowd to Prometheus.
+It will attempt to fetch all related netlink data for each network flow via ss command line tool and will show them
+alongside science domain and activity. 
+
+##### Parameters
+
+```shell
+PROMETHEUS_SS_PATH - path to ss command
+PROMETHEUS_SRV_PORT - port where Prometheus client should listen 
+```
+
+##### Example
+```shell
+PROMETHEUS_SS_PATH='/usr/sbin/ss'
+PROMETHEUS_SRV_PORT=9000
+```
+##### Example
+
+The following is a sample output from Prometheus client: 
+```shell
+# All metrics start with flow_tcp followed by corresponding netlink metric
+# (metrics depend on the kernel version, ss tool version and TCP options enabled)
+#
+# The following labels are populated:
+# exp - science domain
+# act - activity
+# src/dst - source/destination IPs
+# flow - flow src/dst ports
+# opts - TCP/IP options used 
+#
+
+flow_tcp_skmem_rmem_alloc{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 0.0
+flow_tcp_skmem_rcv_buf{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 131072.0
+flow_tcp_skmem_wmem_allow{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 0.0
+flow_tcp_skmem_snd_buf{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 5.778432e+06
+flow_tcp_skmem_fwd_alloc{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 0.0
+flow_tcp_skmem_wmem_queued{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 0.0
+flow_tcp_skmem_opt_mem{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 0.0
+flow_tcp_skmem_back_log{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 0.0
+flow_tcp_skmem_sock_drop{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 0.0
+flow_tcp_rto{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 201.0
+flow_tcp_rtt{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 0.361
+flow_tcp_rtt_var{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 0.091
+flow_tcp_ato{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 40.0
+flow_tcp_mss{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 65464.0
+flow_tcp_pmtu{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 65536.0
+flow_tcp_rcvmss{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 536.0
+flow_tcp_advmss{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 65464.0
+flow_tcp_cwnd{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 47.0
+flow_tcp_ssthresh{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 21.0
+flow_tcp_bytes_sent_total{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 1.61221034e+09
+flow_tcp_bytes_acked_total{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 1.61221034e+09
+flow_tcp_bytes_received_total{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 5212.0
+flow_tcp_segs_out_total{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 26162.0
+flow_tcp_segs_in_total{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 4946.0
+flow_tcp_data_segs_out_total{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 26153.0
+flow_tcp_data_segs_in_total{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 195.0
+flow_tcp_send{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 6.8184110803e+010
+flow_tcp_lastsnd{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 38.0
+flow_tcp_lastrcv{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 43.0
+flow_tcp_lastack{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 38.0
+flow_tcp_pacing_rate{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 8.1792611416e+010
+flow_tcp_delivery_rate{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 2.8156559136e+010
+flow_tcp_delivered{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 26154.0
+flow_tcp_busy{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 645.0
+flow_tcp_rwnd_limited{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 1.0
+flow_tcp_rcv_space{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 65464.0
+flow_tcp_rcv_ssthresh{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 65464.0
+flow_tcp_minrtt{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 0.007
+flow_tcp_snd_wnd{act="cache",dst="<ip>",exp="cms",flow="<int:int>",src="<ip>"} 2.0119552e+07
+flow_tcp_ca_info{act="cache",dst="<ip>",exp="cms",flow="<int:int>",opts="ts sack cubic wscale:14,14",src="<ip>"} 1.0
+```
+
+
 ## Contribution Guide
 Extending **flowd** can be done either by implementing a new plugin or a new backend. The core *plugin* interface requires two methods:
 ```python
