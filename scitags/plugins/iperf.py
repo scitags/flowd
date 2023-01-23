@@ -4,6 +4,7 @@ import psutil
 import ipaddress
 import pprint
 from datetime import datetime
+import random
 
 import scitags
 import scitags.settings
@@ -11,17 +12,19 @@ from scitags.config import config
 
 log = logging.getLogger('scitags')
 
+# ATLAS Analysis Download 65572 exp_id=2 act_id=9
+# ATLAS Production Download 65612 exp_id=2 act_id=19
+# CMS Cache 196620 exp_id=3 act_id=3
+# CMS DataChallenge 196624 exp_id=3 act_id=4
+# LHCb Cache 32780 exp_id=4 act_id=3
+# LHCb DataChallenge 32784 exp_id=4 act_id=4
+# ALICE Data Access 163880 exp_id=5 act_id=10
+# ALICE CLI Download 163896 exp_id=5 act_id=14
+
+FLOW_IDS = [(2, 9), (2, 19), (3, 3), (3, 4), (4, 3), (4, 4), (5, 10), (5, 14)]
 
 def init():
     log.debug('init')
-    if 'NETSTAT_EXPERIMENT' not in config.keys():
-        log.error('Experiment is required for netstat partial tagging')
-        raise scitags.FlowConfigException('Experiment is required for netstat partial tagging')
-
-    if 'NETSTAT_ACTIVITY' not in config.keys():
-        log.error('Activity is required for netstat partial tagging')
-        raise scitags.FlowConfigException('Activity is required for netstat partial tagging')
-
     if 'NETSTAT_INTERNAL_NETWORKS' in config.keys():
         for net in config['NETSTAT_INTERNAL_NETWORKS']:
             try:
@@ -104,8 +107,11 @@ def run(flow_queue, term_event, ip_config):
                 netstat_index[k]['status'] = v
                 netstat_index[k]['start_time'] = datetime.utcnow().isoformat()+'+00:00'
                 netstat_index[k]['end_time'] = None
-                f_id = scitags.FlowID('start', *k + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY'],
-                                                     netstat_index[k]['start_time']))
+                fl_id_index = random.randint(0, len(FLOW_IDS)-1)
+                exp, act = FLOW_IDS[fl_id_index]
+                netstat_index[k]['exp'] = exp
+                netstat_index[k]['act'] = act
+                f_id = scitags.FlowID('start', *k + (exp, act, netstat_index[k]['start_time']))
                 log.debug('   --> {}'.format(f_id))
                 flow_queue.put(f_id)
             elif k in netstat_index.keys() and v in ['TIME_WAIT', 'LAST_ACK', 'FIN_WAIT1', 'FIN_WAIT2', 'CLOSING',
@@ -115,7 +121,7 @@ def run(flow_queue, term_event, ip_config):
                 if not netstat_index[k]['start_time']:   # start_time not set indicates it pre-dates flowd (init_pass)
                     continue
                 netstat_index[k]['end_time'] = datetime.utcnow().isoformat()+'+00:00'
-                f_id = scitags.FlowID('end', *k + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY'],
+                f_id = scitags.FlowID('end', *k + (netstat_index[k]['exp'], netstat_index[k]['act'],
                                                    netstat_index[k]['start_time'], netstat_index[k]['end_time']))
                 log.debug('   --> {}'.format(f_id))
                 flow_queue.put(f_id)
@@ -128,7 +134,7 @@ def run(flow_queue, term_event, ip_config):
             # connections where we didn't catch end state ?
             if netstat_index[c]['start_time'] and not netstat_index[c]['end_time']:
                 netstat_index[c]['end_time'] = datetime.utcnow().isoformat() + '+00:00'
-                f_id = scitags.FlowID('end', *c + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY'],
+                f_id = scitags.FlowID('end', *c + (netstat_index[c]['exp'], netstat_index[c]['act'],
                                                    netstat_index[c]['start_time'], netstat_index[c]['end_time']))
                 log.debug('   --> {}'.format(f_id))
                 flow_queue.put(f_id)

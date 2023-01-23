@@ -26,9 +26,13 @@ log = logging.getLogger('scitags')
 
 class FlowService(object):
     def __init__(self, args):
-        self.backend = config.get('BACKEND')
-        self.backend_mod = None
-        self.backend_proc = None
+        self.backend = config.get('BACKEND', scitags.settings.DEFAULT_BACKEND)
+        if ',' in self.backend:
+            self.backend = [x.strip() for x in self.backend.split(',')]
+        else:
+            self.backend = (self.backend,)
+        self.backend_mod = list()
+        self.backend_proc = list()
         self.plugin = config.get('PLUGIN')
         self.plugin_mod = None
         self.plugin_proc = None
@@ -36,7 +40,8 @@ class FlowService(object):
             self.debug = True
         else:
             self.debug = False
-        self.flow_id_queue = mp.Queue()
+        #self.flow_id_queue = mp.Queue()
+        self.flow_id_bus = scitags.PubSubQueue()
         self.term_event = mp.Event()
 
         header = list()
@@ -86,6 +91,19 @@ class FlowService(object):
             sys.exit(1)
         log.info('flow map registry loaded')
 
+    def check_config(self):
+        if 'netstat' in config['PLUGIN'] and 'EXPERIMENT' not in config.keys() and 'ACTIVITY' not in config.keys():
+            log.error("NETSTAT: netstat plugin requires EXPERIMENT and ACTIVITY")
+            sys.exit(-1)
+        if 'UDP_FIREFLY_NETLINK' in config.keys() and config['UDP_FIREFLY_NETLINK']:
+            try:
+                import pyroute2.netlink.diag
+                import scitags.netlink
+            except ImportError as e:
+                log.error('UDP_FIREFLY_NETLINK: import error, please check if netlink plugin package is installed')
+                log.exception(e)
+                sys.exit(-1)
+
     def init_plugins(self):
         log.debug("    Loading plugin {}".format(self.plugin))
         try:
@@ -113,43 +131,45 @@ class FlowService(object):
             sys.exit(1)
         log.info('plugin loaded: {}'.format(self.plugin))
 
-        backend = config.get('BACKEND', scitags.settings.DEFAULT_BACKEND)
-        log.debug("    Loading backend {}".format(backend))
-        try:
-            default_pkg = os.path.dirname(scitags.backends.__file__)
-            if self.backend in [name for _, name, _ in pkgutil.iter_modules([default_pkg])]:
-                if sys.version_info[0] < 3:
-                    self.backend_mod = __import__("scitags.backends.{}".format(self.backend), globals(), locals(),
-                                                  [self.backend])
+        for backend in self.backend:
+            log.debug("    Loading backend {}".format(backend))
+            try:
+                default_pkg = os.path.dirname(scitags.backends.__file__)
+                if backend in [name for _, name, _ in pkgutil.iter_modules([default_pkg])]:
+                    if sys.version_info[0] < 3:
+                        self.backend_mod.append(__import__("scitags.backends.{}".format(backend), globals(), locals(),
+                                                           [backend]))
+                    else:
+                        self.backend_mod.append(importlib.import_module("scitags.backends.{}".format(backend)))
                 else:
-                    self.backend_mod = importlib.import_module("scitags.backends.{}".format(self.backend))
-            else:
-                log.error("Configured backend not found")
-                return False
-        except ImportError as e:
-            log.error("Exception caught {} while loading backend {}".format(e, self.backend))
-            sys.exit(1)
-        log.info('backend loaded: {}'.format(self.backend))
+                    log.error("Configured backend module {} not found".format(backend))
+                    sys.exit(1)
+            except ImportError as e:
+                log.error("Exception caught {} while loading backend {}".format(e, backend))
+                sys.exit(1)
+            log.info('backend loaded: {}'.format(backend))
 
     def cleanup(self, sig, frame):
         log.info('caught signal {}'.format(sig))
         self.term_event.set()
 
-        while True:
-            try:
-                self.flow_id_queue.get(block=False)
-            except queue.Empty:
-                break
-            except ValueError:
-                break
-        self.flow_id_queue.close()
-        self.flow_id_queue.join_thread()
+        self.flow_id_bus.close()
+        #while True:
+        #    try:
+        #        self.flow_id_queue.get(block=False)
+        #    except queue.Empty:
+        #        break
+        #    except ValueError:
+        #        break
+        #self.flow_id_queue.close()
+        #self.flow_id_queue.join_thread()
 
         if self.plugin_proc and self.plugin_proc.is_alive():
             self.plugin_proc.join(5)
 
-        if self.backend_proc and self.backend_proc.is_alive():
-            self.backend_proc.join(5)
+        for bpi in self.backend_proc:
+            if bpi and bpi.is_alive():
+                bpi.join(5)
 
         # wait -> if self.plugin_proc.is_alive()
         # self.plugin_proc.terminate()
@@ -157,7 +177,8 @@ class FlowService(object):
             pass
         else:
             self.plugin_proc.close()
-            self.backend_proc.close()
+            for bpi in self.backend_proc:
+                bpi.close()
         if os.path.isfile(scitags.settings.PID_FILE):
             os.remove(scitags.settings.PID_FILE)
         log.info('cleanup done')
@@ -174,20 +195,23 @@ class FlowService(object):
         # 2. create process or pool for plugin
         # 3. watch plugin and backend pools until they finish
         log.info('entering main loop')
-        self.backend_proc = mp.Process(target=self.backend_mod.run,
-                                       args=(self.flow_id_queue, self.term_event, self.flow_map, self.ip_config))
-        self.backend_proc.daemon = True
+        for bm in self.backend_mod:
+            bpi = mp.Process(target=bm.run, args=(self.flow_id_bus.register(), self.term_event, self.flow_map, self.ip_config))
+            bpi.daemon = True
+            self.backend_proc.append(bpi)
         self.plugin_proc = mp.Process(target=self.plugin_mod.run,
-                                      args=(self.flow_id_queue, self.term_event, self.ip_config))
+                                      args=(self.flow_id_bus, self.term_event, self.ip_config))
         self.plugin_proc.daemon = True
 
         try:
-            self.backend_proc.start()
+            for bpi in self.backend_proc:
+                bpi.start()
             self.plugin_proc.start()
-            if self.debug:
-                signal.signal(signal.SIGINT, self.cleanup)
-                signal.signal(signal.SIGTERM, self.cleanup)
+
+            signal.signal(signal.SIGINT, self.cleanup)
+            signal.signal(signal.SIGTERM, self.cleanup)
             self.plugin_proc.join()
         except Exception as e:
             log.exception('Exception caught in main')
         log.info('flowd terminated')
+
