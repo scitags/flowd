@@ -16,16 +16,16 @@ log = logging.getLogger('scitags')
 
 def init():
     log.debug('init')
-    if 'NETSTAT_EXPERIMENT' not in config.keys():
+    if 'NETLINK_EXPERIMENT' not in config.keys():
         log.error('Experiment is required for netlink partial tagging')
         raise scitags.FlowConfigException('Experiment is required for netlink partial tagging')
 
-    if 'NETSTAT_ACTIVITY' not in config.keys():
+    if 'NETLINK_ACTIVITY' not in config.keys():
         log.error('Activity is required for netlink partial tagging')
         raise scitags.FlowConfigException('Activity is required for netlink partial tagging')
 
-    if 'NETSTAT_INTERNAL_NETWORKS' in config.keys():
-        for net in config['NETSTAT_INTERNAL_NETWORKS']:
+    if 'NETLINK_INTERNAL_NETWORKS' in config.keys():
+        for net in config['NETLINK_INTERNAL_NETWORKS']:
             try:
                 ipaddress.ip_network(u'{}'.format(net))
             except ValueError as e:
@@ -51,8 +51,8 @@ def run(flow_queue, term_event, ip_config):
     netlink_index = dict()
     int_networks = set()
     init_pass = True
-    if 'NETSTAT_INTERNAL_NETWORKS' in config.keys():
-        for net in config['NETSTAT_INTERNAL_NETWORKS']:
+    if 'NETLINK_INTERNAL_NETWORKS' in config.keys():
+        for net in config['NETLINK_INTERNAL_NETWORKS']:
             int_networks.add(ipaddress.ip_network(u'{}'.format(net)))
 
     while not term_event.is_set():
@@ -114,7 +114,7 @@ def run(flow_queue, term_event, ip_config):
                 netlink_index[k]['start_time'] = datetime.utcnow().isoformat()+'+00:00'
                 netlink_index[k]['end_time'] = None
                 netlink_index[k]['netlink'] = v[1]
-                f_id = scitags.FlowID('start', *k + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY'],
+                f_id = scitags.FlowID('start', *k + (config['NETLINK_EXPERIMENT'], config['NETLINK_ACTIVITY'],
                                                      netlink_index[k]['start_time'], None, netlink_index[k]['netlink']))
                 log.debug('   --> {}'.format(f_id))
                 flow_queue.put(f_id)
@@ -129,7 +129,7 @@ def run(flow_queue, term_event, ip_config):
             # connections where we didn't catch end state ?
             if netlink_index[c]['start_time'] and not netlink_index[c]['end_time']:
                 netlink_index[c]['end_time'] = datetime.utcnow().isoformat() + '+00:00'
-                f_id = scitags.FlowID('end', *c + (config['NETSTAT_EXPERIMENT'], config['NETSTAT_ACTIVITY'],
+                f_id = scitags.FlowID('end', *c + (config['NETLINK_EXPERIMENT'], config['NETLINK_ACTIVITY'],
                                                    netlink_index[c]['start_time'], netlink_index[c]['end_time'],
                                                    netlink_index[c]['netlink']))
                 log.debug('   <-- {}'.format(f_id))
