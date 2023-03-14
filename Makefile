@@ -6,6 +6,8 @@ FILES=LICENSE README.md setup.py setup.cfg MANIFEST.in
 
 sources:
 	rm -rf dist
+	mkdir dist
+	cp python-flowd.spec dist/
 	mkdir -p dist/${PKGNAME}-${PKGVERSION}
 	cp -pr ${FILES} sbin etc scitags dist/${PKGNAME}-${PKGVERSION}/.
 	find dist -type d -name .svn | xargs -i rm -rf {}
