@@ -1,12 +1,4 @@
-#!/bin/sh
-''':'
-for name in python3 python2 python
-do
-    type "$name" > /dev/null 2>&1 && exec "$name" "$0" "$@"
-done
-echo >&2 "Please install python"
-exit 1
-':'''
+#!/usr/bin/env python
 
 import logging
 import logging.handlers
