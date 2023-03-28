@@ -92,7 +92,7 @@ class FlowService(object):
         log.info('flow map registry loaded')
 
     def check_config(self):
-        if 'netstat' in config['PLUGIN'] and 'EXPERIMENT' not in config.keys() and 'ACTIVITY' not in config.keys():
+        if 'netstat' in config['PLUGIN'] and 'NETSTAT_EXPERIMENT' not in config.keys() and 'NETSTAT_ACTIVITY' not in config.keys():
             log.error("NETSTAT: netstat plugin requires EXPERIMENT and ACTIVITY")
             sys.exit(-1)
         if 'UDP_FIREFLY_NETLINK' in config.keys() and config['UDP_FIREFLY_NETLINK']:

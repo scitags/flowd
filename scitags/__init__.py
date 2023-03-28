@@ -9,7 +9,7 @@ except ImportError:
 AUTHOR = "Marian Babik <Marian.Babik@cern.ch>, "
 AUTHOR_EMAIL = "<net-wg-dev@cern.ch>"
 COPYRIGHT = "Copyright (C) 2021"
-VERSION = "0.1.3"
+VERSION = "1.0.0"
 DATE = "13 Jul 2021"
 __author__ = AUTHOR
 __version__ = VERSION

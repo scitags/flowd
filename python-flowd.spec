@@ -1,7 +1,8 @@
 %define name python-flowd
-%define version 0.1.3
-%define unmangled_version 0.1.3
-%define unmangled_version 0.1.3
+%define version 1.0.0
+%define unmangled_version 1.0.0
+%define unmangled_version 1.0.0
+%define _unpackaged_files_terminate_build 0
 %if 0%{?rhel} == 7
   %define dist .el7
 %endif
@@ -9,7 +10,7 @@
 
 Summary: Flow and Packet Marking Service
 Name: %{name}
-Version: 0.1.3
+Version: 1.0.0
 Release: %{release}
 Source0: %{name}-%{unmangled_version}.tar.gz
 License: ASL 2.0
@@ -19,14 +20,9 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Marian Babik <Marian.Babik@cern.ch>,  <<net-wg-dev@cern.ch>>
 Packager: Marian Babik <marian.babik@cern.ch>
-Requires: python-daemon python2-requests python2-psutil systemd-python
+Requires: python2-requests python2-psutil systemd-python python-ipaddress
 Url: https://github.com/scitags/flowd
 BuildRequires: python-setuptools
-
-%description
-
-Flow and Packet Marking Service (www.scitags.org)
-
 
 %prep
 %setup -n %{name}-%{unmangled_version} -n %{name}-%{unmangled_version}
@@ -45,10 +41,10 @@ rm -rf $RPM_BUILD_ROOT
 %doc README.md
 %license LICENSE
 %{python_sitelib}/*
+
 %config(noreplace) /etc/flowd/flowd.cfg
 %attr(755, root, root) /usr/sbin/flowd
 /usr/lib/systemd/system/flowd.service
-
 
 %post
 %systemd_post flowd.service

@@ -18,7 +18,7 @@ The following *backends* are currently available:
 - **ebpf_el8 and epbf_el9** - implementation of the IPv6 packet marking (encodes science domain and activity in the IPv6 flow label, see technical spec for details)
 - **prometheus** - exposes all network flows seen by flowd (including science domain and activity fields) via prometheus client API
 
-> This project is in beta stage. It has been tested on RHEL8 and 9 compatible systems and Ubuntu 20. It requires kernel 4.4+ to run packet marking (ebpf backends). 
+> This project is in beta stage. It has been tested on RHEL8 and 9 compatible systems and Ubuntu 22.04. It requires kernel 4.4+ to run packet marking (ebpf backends). 
 
 ## Installation
 Containerised version of the flowd is currently provided as the only official distribution (work is in progress to support package distribution for RHEL8/9 compatible systems). Please checkout the repo to start.
