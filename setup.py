@@ -2,11 +2,11 @@ from setuptools import setup
 
 import scitags
 
-NAME = 'python-flowd'
+NAME = 'flowd'
 VERSION = scitags.VERSION
 DESCRIPTION = "Flow and Packet Marking Service"
 LONG_DESCRIPTION = """
-Flow and Packet Marking Service (www.scitags.org)
+Flow and Packet Marking Service (flowd) implementation based on the SciTags specification (www.scitags.org).
 """
 AUTHOR = scitags.AUTHOR
 AUTHOR_EMAIL = scitags.AUTHOR_EMAIL
@@ -16,13 +16,15 @@ URL = "https://github.com/scitags/flowd"
 CLASSIFIERS = [
     "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: Apache Software License",
-    "Operating System :: Unix",
+    "Operating System :: Linux",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 2.7",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.5",
     "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
-    "Topic :: Software Development :: Libraries :: Python Modules"
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering",
 ]
 
 setup(name=NAME,
@@ -34,13 +36,23 @@ setup(name=NAME,
       license=LICENSE,
       platforms=PLATFORMS,
       url=URL,
+      download_url='https://github.com/scitags/flowd/archive/refs/tags/{}.tar.gz'.format(VERSION),
       classifiers=CLASSIFIERS,
+      python_requires=">=3.5",
       keywords='operations python network flow packet marking',
-      packages=['scitags', 'scitags.backends', 'scitags.plugins', 'scitags.stun', 'scitags.netlink'],
-      #install_requires=['python-daemon', 'python2-requests', 'python2-psutil', 'systemd-python'],
+      packages=['scitags',
+                'scitags.backends',
+                'scitags.plugins',
+                'scitags.stun',
+                'scitags.netlink'],
+      install_requires=['psutil',
+                        'requests',
+                        'pyroute2',
+                        'systemd',
+                        'prometheus_client',
+                        'bcc'],
       data_files=[
           ('/usr/sbin', ['sbin/flowd']),
           ('/etc/flowd', ['etc/flowd.cfg']),
           ('/usr/lib/systemd/system', ['etc/flowd.service']),
-      ]
-      )
+      ])
