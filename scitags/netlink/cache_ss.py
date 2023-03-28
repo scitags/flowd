@@ -1,13 +1,54 @@
 import logging
-import subprocess
 import re
 
 from scitags.config import config
 import scitags.settings
 
+try:
+    import subprocess32 as subprocess
+except ImportError:
+    import subprocess
+
+try:
+    from subprocess import STDOUT, check_output, CalledProcessError
+except ImportError:
+    STDOUT = subprocess.STDOUT
+
+    def check_output(*popenargs, **kwargs):
+        if 'stdout' in kwargs:  # pragma: no cover
+            raise ValueError('stdout argument not allowed, it will be overridden.')
+        if 'timeout' in kwargs:
+            timeout = kwargs['timeout']
+            del kwargs['timeout']
+        process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+        output, _ = process.communicate(timeout=timeout)
+        retcode = process.poll()
+        if retcode:
+            cmd = kwargs.get("args")
+            if cmd is None:
+                cmd = popenargs[0]
+            raise subprocess.CalledProcessError(retcode, cmd, output=output)
+        return output
+    subprocess.check_output = check_output
+    # overwrite CalledProcessError due to `output`
+    # keyword not being available (in 2.6)
+
+
+    class CalledProcessError(Exception):
+        def __init__(self, returncode, cmd, output=None):
+            self.returncode = returncode
+            self.cmd = cmd
+            self.output = output
+
+        def __str__(self):
+            return "Command '%s' returned non-zero exit status %d" % (
+                self.cmd, self.returncode)
+    subprocess.CalledProcessError = CalledProcessError
+
 log = logging.getLogger('scitags')
 
-SKMEM = ('rmem_alloc', 'rcv_buf', 'wmem_allow', 'snd_buf', 'fwd_alloc', 'wmem_queued', 'opt_mem', 'back_log', 'sock_drop')
+SKMEM = ('rmem_alloc', 'rcv_buf', 'wmem_allow', 'snd_buf', 'fwd_alloc', 'wmem_queued', 'opt_mem', 'back_log',
+         'sock_drop')
 
 TCP_STATES = {'ESTAB': "established",
               'SYN-SENT': "syn-sent",
@@ -22,17 +63,17 @@ TCP_STATES = {'ESTAB': "established",
               'CLOSING': "closing"}
 
 
-def ss(ss_path='/usr/sbin/ss'):
+def ss(ss_path='/sbin/ss'):
+
     try:
-        p = subprocess.run([ss_path, '-iotnmH'], timeout=5, capture_output=True)
-        p.check_returncode()
+        str_out = subprocess.check_output(ss_path+' -iotnmH', shell=True, stderr=subprocess.STDOUT, stdin=None,
+                                          timeout=5)
     except subprocess.TimeoutExpired as e:
         log.exception(e)
         return
-    except subprocess.CalledProcessorError as e:
-        log.exception(e)
-        return
-    return p.stdout
+    except subprocess.CalledProcessError as e:
+        str_out = e.output
+    return str_out
 
 
 def pairwise(iterable):
@@ -63,6 +104,14 @@ def parse_ip(hdrs):
         dst = dst.replace('::ffff:', '')
 
     return src, src_port, dst, dst_port
+
+
+def num(s):
+    s = s.replace('bps', '').replace('M', '').replace('K', '')
+    try:
+        return int(s)
+    except ValueError:
+        return float(s)
 
 
 def parse_ss(ss_stdout):
@@ -96,41 +145,41 @@ def parse_ss(ss_stdout):
             if 'bbr:(' in e:
                 bbr_raw = e.replace('bbr:(', '')[:-1].split(',')
                 for be in bbr_raw:
-                    tcpi_entry['bbr_'+be.split(':')[0]] = float(be.split(':')[1].replace('bps', ''))
+                    tcpi_entry['bbr_'+be.split(':')[0]] = num(be.split(':')[1])
             elif 'skmem:(' in e:
                 skmem_raw = e.replace('skmem:(', '')[:-1].split(',')
                 if len(skmem_raw) != 9:
                     continue
                 for skh, ske in zip(SKMEM, skmem_raw):
-                    tcpi_entry['skmem_'+skh] = int(re.sub('\D', '', ske))
+                    tcpi_entry['skmem_'+skh] = num(re.sub('\D', '', ske))
             elif re.match(r'^rtt:*.', e):
                 rem = re.findall(r'^rtt:(\d+\.\d+)/(\d+\.\d+)$', e)
                 if rem and len(rem[0]) == 2:
-                    tcpi_entry['rtt'] = float(rem[0][0])
-                    tcpi_entry['rtt_var'] = float(rem[0][1])
+                    tcpi_entry['rtt'] = num(rem[0][0])
+                    tcpi_entry['rtt_var'] = num(rem[0][1])
             elif 'rwnd_limited:' in e:
-                tcpi_entry['rwnd_limited'] = int(e.split(':')[1].split('(')[0].replace('ms', ''))
+                tcpi_entry['rwnd_limited'] = num(e.split(':')[1].split('(')[0].replace('ms', ''))
             elif 'sndbuf_limited:' in e:
-                tcpi_entry['sndbuf_limited'] = int(e.split(':')[1].split('(')[0].replace('ms', ''))
+                tcpi_entry['sndbuf_limited'] = num(e.split(':')[1].split('(')[0].replace('ms', ''))
             elif 'wscale' in e:
                 tcpi_entry['opts'].append(e)
             elif ':' in e:
                 k, v = e.split(':')
                 v = v.replace('ms', '')
                 if '.' in v:
-                    tcpi_entry[k] = float(v)
+                    tcpi_entry[k] = num(v)
                 elif ',' in v:
                     tcpi_entry[k] = v
                 elif '/' in v:
-                    tcpi_entry[k] = int(v.split('/')[1])
+                    tcpi_entry[k] = num(v.split('/')[1])
                 elif v:
-                    tcpi_entry[k] = int(v)
+                    tcpi_entry[k] = num(v)
                 else:
                     tcpi_entry[k] = v
             elif 'rate' in e:
-                tcpi_entry[e] = int(tcpi[tcpi.index(e)+1].replace('bps', ''))
+                tcpi_entry[e] = num(tcpi[tcpi.index(e)+1])
             elif e == 'send':
-                tcpi_entry['send'] = int(tcpi[tcpi.index(e)+1].replace('bps', ''))
+                tcpi_entry['send'] = num(tcpi[tcpi.index(e)+1])
             elif 'bps' not in e and 'app_limited' not in e:
                 tcpi_entry['opts'].append(e)
         netc_entry['tcp_info'] = tcpi_entry
