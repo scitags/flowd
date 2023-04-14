@@ -1,5 +1,5 @@
 %define pypi_name flowd
-%define version 1.0.1
+%define version 1.0.2
 %define release 1%{?dist}
 %define _unpackaged_files_terminate_build 0
 
@@ -107,8 +107,15 @@ rm -rf $RPM_BUILD_ROOT
 %systemd_postun_with_restart flowd.service
 
 %changelog
+* Fri Apr 14 2023 Marian Babik <marian.babik@cern.ch> - 1.0.2-1
+- Removed systemd dependencies
+- Py3 and Fedora compatibility package changes
+
 * Tue Mar 28 2023 Marian Babik <marian.babik@cern.ch> - 1.0.1-1
-- Added support for EL8 and EL9 packaging
+- Introduces pypi packaging
+- Adds CC7 compatibility fixes for Prometheus client
+- New docker setup (now based on py3)
+- Various bugfixes
 
 * Mon Jan 23 2023 Marian Babik <marian.babik@cern.ch> - 1.0.0-1
 - Initial package
