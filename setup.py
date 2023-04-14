@@ -48,7 +48,6 @@ setup(name=NAME,
       install_requires=['psutil',
                         'requests',
                         'pyroute2',
-                        'systemd',
                         'prometheus_client',
                         'bcc'],
       data_files=[
