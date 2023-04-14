@@ -16,7 +16,7 @@ URL = "https://github.com/scitags/flowd"
 CLASSIFIERS = [
     "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: Apache Software License",
-    "Operating System :: Linux",
+    "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.5",
     "Programming Language :: Python :: 3.6",
