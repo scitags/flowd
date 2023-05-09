@@ -26,7 +26,7 @@ log = logging.getLogger('scitags')
 try:
     from bcc import BPF
 except ImportError as e:
-    log.error("Unable to import ebpf/bcc library, please install via python3-bcc package or pip install flowd[bcc]")
+    log.error("Unable to import ebpf/bcc library, please install via python3-bcc package or pip install flowd[ebpf]")
     sys.exit(-1)
 
 ipr = IPRoute()

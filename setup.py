@@ -48,6 +48,8 @@ setup(name=NAME,
       install_requires=['psutil',
                         'requests',
                         'prometheus_client'],
+      extras_requires={'ebpf': ['bcc'],
+                       'netlink': ['pyroute2']},
       data_files=[
           ('/usr/sbin', ['sbin/flowd']),
           ('/etc/flowd', ['etc/flowd.cfg']),

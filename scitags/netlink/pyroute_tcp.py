@@ -13,7 +13,7 @@ try:
     import pyroute2
 except ImportError as e:
     log.error(
-        "Unable to import pyroute2 library, please install python3-pyroute2 package or via pip install flowd[pyroute]")
+        "Unable to import pyroute2 library, please install python3-pyroute2 package or via pip install flowd[netlink]")
     sys.exit(-1)
 
 
