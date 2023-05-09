@@ -1,11 +1,8 @@
-#!/usr/bin/python
-
 # Copyright and licence statements come from simple_tc.py from bcc repo
 # Copyright (c) PLUMgrid, Inc.
 # Licensed under the Apache License, Version 2.0 (the "License")
 
 
-#Stolen from UDP firefly backend
 import logging
 
 try:
@@ -18,14 +15,20 @@ import scitags.settings
 
 # Needed for eBPF backend
 
-from bcc import BPF
 from pyroute2 import IPRoute
 import ctypes
-import socket
+import sys
 import ipaddress
 import random
 
 log = logging.getLogger('scitags')
+
+try:
+    from bcc import BPF
+except ImportError as e:
+    log.error("Unable to import ebpf/bcc library, please install python3-bcc package or via pip install flowd[bcc]")
+    sys.exit(-1)
+
 
 ipr = IPRoute()
 
@@ -66,25 +69,26 @@ int set_flow_label(struct __sk_buff *skb)
 
 """
 
-# Load eBPF program
-b = BPF(text=text, debug=0)
-flowlabel_table = b.get_table('flowlabel_table')
-fn = b.load_func("set_flow_label", BPF.SCHED_CLS)
 
-keys = (flowlabel_table.Leaf * 2)()
+def ebpf_init():
+    global flowlabel_table, keys, idx
+    # Load eBPF program
+    b = BPF(text=text, debug=0)
+    flowlabel_table = b.get_table('flowlabel_table')
+    fn = b.load_func("set_flow_label", BPF.SCHED_CLS)
+    keys = (flowlabel_table.Leaf * 2)()
+    # Attach to network interface (get from config)
+    if 'NETWORK_INTERFACE' in config.keys():
+        interface = config['NETWORK_INTERFACE']
+        idx = ipr.link_lookup(ifname=interface)[0]
+    else:
+        err = 'eBPF backend requires network interface to be specified'
+        log.error(err)
+        raise scitags.FlowIdException(err)
+    ipr.tc("add", "sfq", idx, "1:")
+    ipr.tc("add-filter", "bpf", idx, ":1", fd=fn.fd,
+           name=fn.name, parent="1:", action="ok", classid=1)
 
-# Attach to network interface (get from config)
-if 'NETWORK_INTERFACE' in config.keys():
-    interface = config['NETWORK_INTERFACE']
-    idx = ipr.link_lookup(ifname=interface)[0]
-else:
-    err = 'eBPF backend requires network interface to be specified'
-    log.error(err)
-    raise scitags.FlowIdException(err)
-
-ipr.tc("add", "sfq", idx, "1:")
-ipr.tc("add-filter", "bpf", idx, ":1", fd=fn.fd,
-   name=fn.name, parent="1:", action="ok", classid=1)
 
 # Function to put together flow label including entropy bits
 def bitpattern(exp_id, act_id):
@@ -114,9 +118,10 @@ def bitpattern(exp_id, act_id):
 
     # Return as integer
     return int(flowlabel, 2)
-    
+
+
 def run(flow_queue, term_event, flow_map, ip_config):
-    # Stolen from udp_firefly backend
+    ebpf_init()
     while not term_event.is_set():
         try:
             flow_id = flow_queue.get(block=True, timeout=0.5)

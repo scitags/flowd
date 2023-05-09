@@ -1,11 +1,8 @@
-#!/usr/bin/python
-
 # Copyright and licence statements come from simple_tc.py from bcc repo
 # Copyright (c) PLUMgrid, Inc.
 # Licensed under the Apache License, Version 2.0 (the "License")
 
 
-#Stolen from UDP firefly backend
 import logging
 
 try:
@@ -18,14 +15,19 @@ import scitags.settings
 
 # Needed for eBPF backend
 
-from bcc import BPF
 from pyroute2 import IPRoute
 import ctypes
-import socket
 import ipaddress
 import random
+import sys
 
 log = logging.getLogger('scitags')
+
+try:
+    from bcc import BPF
+except ImportError as e:
+    log.error("Unable to import ebpf/bcc library, please install via python3-bcc package or pip install flowd[bcc]")
+    sys.exit(-1)
 
 ipr = IPRoute()
 
@@ -99,39 +101,38 @@ int set_flow_label(struct __sk_buff *skb)
 """
 
 
-class fourtuple(ctypes.Structure):
+class NetFlowId(ctypes.Structure):
     _fields_ = [("ip6_hi", ctypes.c_ulong), ("ip6_lo", ctypes.c_ulong), ("dport", ctypes.c_ushort), ("sport", ctypes.c_ushort)]
 
 
-# Load eBPF program
-log.debug('Loading eBPF')
-b = BPF(text=text, debug=0)
-flowlabel_table = b.get_table('flowlabel_table')
-tobedeleted = b.get_table('tobedeleted')
-fn = b.load_func("set_flow_label", BPF.SCHED_CLS)
-log.debug('eBPF load completed')
-
-# Attach to network interface (get from config)
-log.debug('Attaching to network interface {}'.format(config['NETWORK_INTERFACE']))
-if 'NETWORK_INTERFACE' in config.keys():
-    interface = config['NETWORK_INTERFACE']
-    idx = ipr.link_lookup(ifname=interface)[0]
-else:
-    err = 'eBPF backend requires network interface to be specified'
-    log.error(err)
-    raise scitags.FlowIdException(err)
-log.debug('eBPF attached')
-
-# Clean up, in case backend crashed last time
-try:
-    ipr.tc("del", "sfq", idx, "1:")
-except:
-    pass
-
-ipr.tc("add", "sfq", idx, "1:")
-ipr.tc("add-filter", "bpf", idx, ":1", fd=fn.fd,
-   name=fn.name, parent="1:", action="ok", classid=1)
-log.debug('ipr.tc add-filter success')
+def ebpf_init():
+    global flowlabel_table, tobedeleted, idx
+    # Load eBPF program
+    log.debug('Loading eBPF')
+    b = BPF(text=text, debug=0)
+    flowlabel_table = b.get_table('flowlabel_table')
+    tobedeleted = b.get_table('tobedeleted')
+    fn = b.load_func("set_flow_label", BPF.SCHED_CLS)
+    log.debug('eBPF load completed')
+    # Attach to network interface (get from config)
+    log.debug('Attaching to network interface {}'.format(config['NETWORK_INTERFACE']))
+    if 'NETWORK_INTERFACE' in config.keys():
+        interface = config['NETWORK_INTERFACE']
+        idx = ipr.link_lookup(ifname=interface)[0]
+    else:
+        err = 'eBPF backend requires network interface to be specified'
+        log.error(err)
+        raise scitags.FlowIdException(err)
+    log.debug('eBPF attached')
+    # Clean up, in case backend crashed last time
+    try:
+        ipr.tc("del", "sfq", idx, "1:")
+    except:
+        pass
+    ipr.tc("add", "sfq", idx, "1:")
+    ipr.tc("add-filter", "bpf", idx, ":1", fd=fn.fd,
+           name=fn.name, parent="1:", action="ok", classid=1)
+    log.debug('ipr.tc add-filter success')
 
 
 # Function to put together flow label including entropy bits
@@ -168,7 +169,7 @@ def bitpattern(exp_id, act_id):
 
 
 def run(flow_queue, term_event, flow_map, ip_config):
-    # Stolen from udp_firefly backend
+    ebpf_init()
     while not term_event.is_set():
         try:
             flow_id = flow_queue.get(block=True, timeout=0.5)
@@ -193,7 +194,7 @@ def run(flow_queue, term_event, flow_map, ip_config):
                 dport = flow_id.dst_port
                 sport = flow_id.src_port
 
-                key = fourtuple(ip6_hi, ip6_lo, dport, sport)
+                key = NetFlowId(ip6_hi, ip6_lo, dport, sport)
 
                 # Get the bitpattern, including entropy bits
                 flowlabel = bitpattern(exp_id, act_id)
@@ -220,7 +221,7 @@ def run(flow_queue, term_event, flow_map, ip_config):
                 dport = flow_id.dst_port
                 sport = flow_id.src_port
 
-                key = fourtuple(ip6_hi, ip6_lo, dport, sport)
+                key = NetFlowId(ip6_hi, ip6_lo, dport, sport)
 
                 # Remove IP from BPF hash
                 # This needs kernel 5.6 at least; have to do it differently for RHEL 8
