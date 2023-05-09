@@ -146,7 +146,7 @@ def run(flow_queue, term_event, flow_map, ip_config):
                                                                SYSLOG_APP_NAME, SYSLOG_PROCID, SYSLOG_MSGID,
                                                                SYSLOG_STRUCT_DATA)
             udp_payload = syslog_header + json.dumps(firefly_json(flow_id, flow_map, ip_config, netlink_cache))
-            log.debug(udp_payload)
+            log.info(udp_payload)
             if ':' in flow_id.dst:
                 sock6.sendto(udp_payload.encode('utf-8'), (dst, scitags.settings.UDP_FIREFLY_PORT))
             else:
