@@ -1,6 +1,6 @@
+from scitags.netlink.pyroute_tcp import TCP
 from pyroute2.netlink.diag import DiagSocket
 from pyroute2.netlink.diag import SS_CONN
-from scitags.netlink.pyroute_tcp import TCP
 import logging
 
 log = logging.getLogger('scitags')
