@@ -4,6 +4,18 @@
 #
 import json
 from socket import (AF_INET, AF_INET6)
+import logging
+import sys
+
+log = logging.getLogger('scitags')
+
+try:
+    import pyroute2
+except ImportError as e:
+    log.error(
+        "Unable to import pyroute2 library, please install python3-pyroute2 package or via pip install flowd[netlink]")
+    sys.exit(-1)
+
 
 try:
     import psutil

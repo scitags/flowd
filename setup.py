@@ -16,7 +16,7 @@ URL = "https://github.com/scitags/flowd"
 CLASSIFIERS = [
     "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux"
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.5",
     "Programming Language :: Python :: 3.6",
@@ -48,6 +48,8 @@ setup(name=NAME,
       install_requires=['psutil',
                         'requests',
                         'prometheus_client'],
+      extras_requires={'ebpf': ['bcc'],
+                       'netlink': ['pyroute2']},
       data_files=[
           ('/usr/sbin', ['sbin/flowd']),
           ('/etc/flowd', ['etc/flowd.cfg']),
