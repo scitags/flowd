@@ -90,6 +90,54 @@ int set_flow_label(struct __sk_buff *skb)
 
         return -1;
     }
+    // Handle vlan tag
+    else if (ethernet->type == 0x8100)
+    {
+        struct dot1q_t *dot1q = cursor_advance(cursor, sizeof(*dot1q));
+
+        if (dot1q->type == 0x86DD)
+        {
+            struct ip6_t *ip6 = cursor_advance(cursor, sizeof(*ip6));
+
+            struct fourtuple addrport;
+
+            // This is necessary for some reason to do with compiler padding
+            __builtin_memset(&addrport, 0, sizeof(addrport));
+
+            addrport.ip6_hi = ip6->dst_hi;
+            addrport.ip6_lo = ip6->dst_lo;
+
+            // TCP
+            if (ip6->next_header == 6)
+            {
+                struct tcp_t *tcp = cursor_advance(cursor, sizeof(*tcp));
+
+                addrport.dport = tcp->dst_port;
+                addrport.sport = tcp->src_port;
+
+                u64 *delete = tobedeleted.lookup(&addrport);
+
+                u64 *flowlabel = flowlabel_table.lookup(&addrport);
+
+                if (delete)
+                {
+                    flowlabel_table.delete(&addrport);
+                    tobedeleted.delete(&addrport);
+                }
+                else if (flowlabel)
+                {
+                    ip6->flow_label = *flowlabel;
+                }
+            }
+
+            return -1;
+
+        }
+        else 
+        {
+            return -1;
+        }
+    }
     else
     {
         return -1;
