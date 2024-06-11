@@ -1,7 +1,5 @@
 # Copyright and licence statements come from simple_tc.py from bcc repo
-# Copyright (c) PLUMgrid, Inc.
 # Licensed under the Apache License, Version 2.0 (the "License")
-
 
 import logging
 
@@ -92,6 +90,54 @@ int set_flow_label(struct __sk_buff *skb)
 
         return -1;
     }
+    // Handle vlan tag
+    else if (ethernet->type == 0x8100)
+    {
+        struct dot1q_t *dot1q = cursor_advance(cursor, sizeof(*dot1q));
+
+        if (dot1q->type == 0x86DD)
+        {
+            struct ip6_t *ip6 = cursor_advance(cursor, sizeof(*ip6));
+
+            struct fourtuple addrport;
+
+            // This is necessary for some reason to do with compiler padding
+            __builtin_memset(&addrport, 0, sizeof(addrport));
+
+            addrport.ip6_hi = ip6->dst_hi;
+            addrport.ip6_lo = ip6->dst_lo;
+
+            // TCP
+            if (ip6->next_header == 6)
+            {
+                struct tcp_t *tcp = cursor_advance(cursor, sizeof(*tcp));
+
+                addrport.dport = tcp->dst_port;
+                addrport.sport = tcp->src_port;
+
+                u64 *delete = tobedeleted.lookup(&addrport);
+
+                u64 *flowlabel = flowlabel_table.lookup(&addrport);
+
+                if (delete)
+                {
+                    flowlabel_table.delete(&addrport);
+                    tobedeleted.delete(&addrport);
+                }
+                else if (flowlabel)
+                {
+                    ip6->flow_label = *flowlabel;
+                }
+            }
+
+            return -1;
+
+        }
+        else 
+        {
+            return -1;
+        }
+    }
     else
     {
         return -1;
@@ -106,7 +152,9 @@ class NetFlowId(ctypes.Structure):
 
 
 def ebpf_init():
-    global flowlabel_table, tobedeleted, idx
+    global flowlabel_table, tobedeleted, idxdict
+    interfacelist = []
+    idxdict = {}
     # Load eBPF program
     log.debug('Loading eBPF')
     b = BPF(text=text, debug=0)
@@ -115,24 +163,27 @@ def ebpf_init():
     fn = b.load_func("set_flow_label", BPF.SCHED_CLS)
     log.debug('eBPF load completed')
     # Attach to network interface (get from config)
-    log.debug('Attaching to network interface {}'.format(config['NETWORK_INTERFACE']))
     if 'NETWORK_INTERFACE' in config.keys():
-        interface = config['NETWORK_INTERFACE']
-        idx = ipr.link_lookup(ifname=interface)[0]
+        log.debug('Attaching to network interface {}'.format(config['NETWORK_INTERFACE']))
+        interfacelist = config['NETWORK_INTERFACE']
+        for interface in interfacelist.split(","):
+            idxdict[interface] = ipr.link_lookup(ifname=interface)[0]
     else:
         err = 'eBPF backend requires network interface to be specified'
         log.error(err)
         raise scitags.FlowIdException(err)
     log.debug('eBPF attached')
     # Clean up, in case backend crashed last time
-    try:
-        ipr.tc("del", "sfq", idx, "1:")
-    except:
-        pass
-    ipr.tc("add", "sfq", idx, "1:")
-    ipr.tc("add-filter", "bpf", idx, ":1", fd=fn.fd,
-           name=fn.name, parent="1:", action="ok", classid=1)
-    log.debug('ipr.tc add-filter success')
+    for key in idxdict:
+        try:
+            ipr.tc("del", "sfq", idxdict[key], "1:")
+        except:
+            pass
+
+        ipr.tc("add", "sfq", idxdict[key], "1:")
+        ipr.tc("add-filter", "bpf", idxdict[key], ":1", fd=fn.fd,
+               name=fn.name, parent="1:", action="ok", classid=1)
+        log.debug('ipr.tc add-filter success to interface ' + key)
 
 
 # Function to put together flow label including entropy bits
@@ -177,12 +228,33 @@ def run(flow_queue, term_event, flow_map, ip_config):
             continue
 
         if flow_id.state == "start":
-            exp_id = flow_id.exp
+            if flow_id.exp in flow_map['experiments'].keys():
+                exp_id = flow_map['experiments'][flow_id.exp]
+            elif type(flow_id.exp) == int:
+                exp_id = flow_id.exp
+            else:
+                err = 'Failed to map experiment ({}) to id'.format(flow_id.exp)
+                log.error(err)
+
+                # Clean up, or backend won't be able to restart
+                for key in idxdict:
+                    ipr.tc("del", "sfq", idxdict[key], "1:")
+                raise scitags.FlowIdException(err)
 
             if not flow_id.act:
                 act_id = 0
-            else:
+            elif flow_id.act in flow_map['activities'][exp_id].keys():
+                act_id = flow_map['activities'][exp_id][flow_id.act]
+            elif type(flow_id.act) == int:
                 act_id = flow_id.act
+            else:
+                err = 'Failed to map activity ({}/{}) to id'.format(flow_id.exp, flow_id.act)
+                log.error(err)
+
+                # Clean up, or backend won't be able to restart
+                for key in idxdict:
+                    ipr.tc("del", "sfq", idxdict[key], "1:")
+                raise scitags.FlowIdException(err)
 
             # New stuff starts here
             try:
@@ -241,4 +313,5 @@ def run(flow_queue, term_event, flow_map, ip_config):
                 #raise scitags.FlowIdException(err)
 
     # Clean up
-    ipr.tc("del", "sfq", idx, "1:")
+    for key in idxdict:
+        ipr.tc("del", "sfq", idxdict[key], "1:")
