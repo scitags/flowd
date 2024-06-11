@@ -17,6 +17,7 @@ def init():
     log.debug('np_api init')
     if os.path.exists(scitags.settings.NP_API_FILE) and stat.S_ISFIFO(os.stat(scitags.settings.NP_API_FILE).st_mode):
         return
+    oldmask = os.umask(0o000)
     try:
         if sys.version_info[0] < 3:
             os.mkfifo(scitags.settings.NP_API_FILE, 0o666)
@@ -25,6 +26,7 @@ def init():
     except IOError as e:
         log.error('Unable to create command pipe {}'.format(scitags.settings.NP_API_FILE))
         sys.exit(1)
+    os.umask(oldmask)
 
 
 def run(flow_queue, term_event, ip_config):
@@ -52,11 +54,15 @@ def run(flow_queue, term_event, ip_config):
             flow_state = entry[0].strip()
             proto = entry[1].strip()
             src = entry[2].strip()
-            src_port = entry[3].strip()
             dst = entry[4].strip()
-            dst_port = entry[5].strip()
-            exp_id = entry[6].strip()
-            activity_id = entry[7].strip()
+            try:
+                src_port = entry[3].strip()
+                dst_port = entry[5].strip()
+                exp_id = entry[6].strip()
+                activity_id = entry[7].strip()
+            except ValueError as e:
+                log.exception(e)
+                continue
             start_time = None
             end_time = None
             netlink = None
