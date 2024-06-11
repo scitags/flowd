@@ -15,7 +15,7 @@ The following *plugins* are currently available:
   
 The following *backends* are currently available:
 - **udp-firefly** - implementation of the UDP firefly packets.
-- **ebpf_el8 and epbf_el9** - implementation of the IPv6 packet marking (encodes science domain and activity in the IPv6 flow label, see technical spec for details)
+- **ebpf** - implementation of the IPv6 packet marking (encodes science domain and activity in the IPv6 flow label, see technical spec for details)
 - **prometheus** - exposes all network flows seen by flowd (including science domain and activity fields) via prometheus client API
 
 > This project is in beta stage. It has been tested on RHEL8 and 9 compatible systems and Ubuntu 22.04. It requires kernel 4.4+ to run packet marking (ebpf backends). 
