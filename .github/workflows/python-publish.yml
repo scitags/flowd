@@ -12,21 +12,18 @@ on:
   release:
     types: [published]
 
-permissions:
-  contents: read
-  id-token: write
-
 jobs:
   deploy:
-
     runs-on: ubuntu-latest
-
+    environment: release
+    permissions:
+      id-token: write
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: '3.x'
+        python-version: '3.9'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
