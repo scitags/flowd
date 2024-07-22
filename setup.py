@@ -2,7 +2,7 @@ from setuptools import setup
 
 import scitags
 
-NAME = 'scitags'
+NAME = 'flowd'
 VERSION = scitags.VERSION
 DESCRIPTION = "Flow and Packet Marking Service"
 LONG_DESCRIPTION = """
