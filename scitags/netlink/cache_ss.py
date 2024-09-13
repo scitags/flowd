@@ -189,7 +189,8 @@ def parse_ss(ss_stdout):
 
 def netlink_cache_add(flow_state, src, src_port, dst, dst_port, netlink_cache):
     try:
-        netc = parse_ss(ss())
+        ss_path = config.get('PROMETHEUS_SS_PATH', scitags.settings.SS_PATH)
+        netc = parse_ss(ss(ss_path=ss_path))
     except Exception as e:
         log.exception('Exception caught while querying netlink')
         return
