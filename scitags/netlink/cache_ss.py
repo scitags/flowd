@@ -85,6 +85,12 @@ def pairwise(iterable):
 def parse_ip(hdrs):
     src_raw = hdrs[3]
     dst_raw = hdrs[4]
+    src_zone = re.search(r'.*(%vlan.*\d+):.*', src_raw)
+    dst_zone = re.search(r'.*(%vlan.*\d+):.*', dst_raw)
+    if src_zone:
+        src_raw = src_raw.replace(src_zone.group(1), "")
+    if dst_zone:
+        dst_raw = dst_raw.replace(dst_zone.group(1), "")
     if '[' in src_raw:  # ipv6
         src_t = src_raw.split(']:')
         dst_t = dst_raw.split(']:')
@@ -108,6 +114,8 @@ def parse_ip(hdrs):
 
 def num(s):
     s = s.replace('bps', '').replace('M', '').replace('K', '')
+    if not re.fullmatch('(\d+(?:\.\d+)?)', s):
+        return 0
     try:
         return int(s)
     except ValueError:
@@ -177,6 +185,7 @@ def parse_ss(ss_stdout):
                 else:
                     tcpi_entry[k] = v
             elif 'rate' in e:
+                print(tcpi[tcpi.index(e)+1])
                 tcpi_entry[e] = num(tcpi[tcpi.index(e)+1])
             elif e == 'send':
                 tcpi_entry['send'] = num(tcpi[tcpi.index(e)+1])
