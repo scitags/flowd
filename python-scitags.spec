@@ -3,8 +3,8 @@
 %define release 1%{?dist}
 %define _unpackaged_files_terminate_build 0
 
-Name: python3-%{pypi_name}
-Version: %{version}
+Name: python3-scitags
+Version: 1.1.4
 Release: %{release}
 Summary: Flow and Packet Marking Service
 Url: https://github.com/scitags/flowd
