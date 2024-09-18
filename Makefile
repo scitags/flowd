@@ -1,23 +1,16 @@
-PKGNAME=python-scitags
-SPECFILE=${PKGNAME}.spec
-
-PKGVERSION=$(shell grep -s '^Version:' $(SPECFILE) | sed -e 's/Version: *//')
-FILES=LICENSE README.md setup.py setup.cfg MANIFEST.in 
+SPECFILE             = $(shell find -maxdepth 1 -type f -name *.spec)
+SPECFILE_NAME        = $(shell awk '$$1 == "Name:"     { print $$2 }' $(SPECFILE) )
+SPECFILE_VERSION     = $(shell awk '$$1 == "Version:"  { print $$2 }' $(SPECFILE) )
+DIST                ?= $(shell rpm --eval %{dist})
 
 sources:
-	rm -rf dist
-	mkdir dist
-	cp python-scitags.spec dist/
-	mkdir -p dist/${PKGNAME}-${PKGVERSION}
-	cp -pr ${FILES} sbin etc scitags dist/${PKGNAME}-${PKGVERSION}/.
-	find dist -type d -name .svn | xargs -i rm -rf {}
-	find dist -type d -name .git | xargs -i rm -rf {}
-	cd dist ; tar cfz ../${PKGNAME}-${PKGVERSION}.tar.gz ${PKGNAME}-${PKGVERSION}
-	rm -rf dist
+	python3 setup.py sdist
 
 srpm: sources
-	rpmbuild -bs --define "_sourcedir ${PWD}" dist/python-scitags.spec
+	rpmbuild -bs --define "dist $(DIST)" --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/dist' $(SPECFILE)
 
 rpm: sources
-	rpmbuild -ba --define "_sourcedir ${PWD}" dist/python-scitags.spec
+	rpmbuild -bb --define "dist $(DIST)" --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/dist' $(SPECFILE)
 
+clean:
+	rm -rf build/ *.tgz
