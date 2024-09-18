@@ -1,5 +1,5 @@
 %define pypi_name scitags
-%define version 1.1.2
+%define version 1.1.4
 %define release 1%{?dist}
 %define _unpackaged_files_terminate_build 0
 
