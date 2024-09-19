@@ -1,10 +1,10 @@
 %define pypi_name scitags
-%define version 1.1.5
+%define version 1.1.4
 %define release 1%{?dist}
 %define _unpackaged_files_terminate_build 0
 
 Name: python3-scitags
-Version: 1.1.5
+Version: 1.1.4
 Release: %{release}
 Summary: Scitags Flow and Packet Marking Service
 Url: https://github.com/scitags/flowd
