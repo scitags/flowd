@@ -16,6 +16,7 @@ Group: Development/Libraries
 Prefix: %{_prefix}
 BuildArch: noarch
 Obsoletes: python-flowd <= %{version}
+BuildRequires: python3
 BuildRequires: python3-setuptools
 BuildRequires: python3-devel
 BuildRequires: systemd-rpm-macros
