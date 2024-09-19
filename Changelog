@@ -1,3 +1,28 @@
+* Thu Sep 19 2024 Marian Babik <marian.babik@cern.ch> 1.1.5
+- cache_ss: fixed missing ss_path
+- added ip6 zone index handling in ss parser
+- added num() check with regex in ss parser
+- publishing flowd image to github containers
+- build system for rpms in koji
+
+* Mon Jul 22 2024 Marian Babik <marian.babik@cern.ch> 1.1.4
+- added experimental iperf plugin
+- bugfixes in the rpm spec file
+
+* Thu Jun 13 2024 Marian Babik <marian.babik@cern.ch> 1.1.2
+- Packaging for Redhat/Alma/Rocky
+- eBPF multi-NIC support and vlan tags handling
+- Automated Pypi publishing
+
+* Mon Jan 23 2023 Marian Babik <marian.babik@cern.ch> 1.1.0
+- New backends: eBPF for packet marking and Prometheus to expose metrics
+- New plugins: netlink, firefly and iperf
+- Updated documentation (added config reference, contribution guide)
+- Support for running mutliple backends
+- Systemd integration
+- Netlink cache and parsing for udp_firefly and prometheus backends
+- Updated license and copyrights
+
 * Fri Oct 01 2021 Marian Babik <marian.babik@cern.ch> 0.1.3
 - ssl verification updated
 
