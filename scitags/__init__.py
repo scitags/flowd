@@ -8,8 +8,8 @@ except ImportError:
 
 AUTHOR = "Marian Babik <Marian.Babik@cern.ch>, Tristan Sullivan <tssulliv@uvic.ca>"
 AUTHOR_EMAIL = "<net-wg-dev@cern.ch>"
-VERSION = "1.1.4"
-DATE = "22 July 2024"
+VERSION = "1.1.5"
+DATE = "19 Sept 2024"
 __author__ = AUTHOR
 __version__ = VERSION
 __date__ = DATE
