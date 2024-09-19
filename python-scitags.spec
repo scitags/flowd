@@ -1,10 +1,10 @@
 %define pypi_name scitags
-%define version 1.1.4
+%define version 1.1.5
 %define release 1%{?dist}
 %define _unpackaged_files_terminate_build 0
 
 Name: python3-scitags
-Version: 1.1.4
+Version: 1.1.5
 Release: %{release}
 Summary: Scitags Flow and Packet Marking Service
 Url: https://github.com/scitags/flowd
@@ -110,21 +110,3 @@ rm -rf $RPM_BUILD_ROOT
 %postun
 %systemd_postun_with_restart flowd.service
 
-%changelog
-* Fri Jun 14 2024 Marian Babik <marian.babik@cern.ch> - 1.1.2-1
-- Refactored ebpf backends
-- Added capability to configure ebpf on multiple network interfaces
-- Added vlan tagging capability to ebpf backend
-
-* Fri Apr 14 2023 Marian Babik <marian.babik@cern.ch> - 1.0.2-1
-- Removed systemd dependencies
-- Py3 and Fedora compatibility package changes
-
-* Tue Mar 28 2023 Marian Babik <marian.babik@cern.ch> - 1.0.1-1
-- Introduces pypi packaging
-- Adds CC7 compatibility fixes for Prometheus client
-- New docker setup (now based on py3)
-- Various bugfixes
-
-* Mon Jan 23 2023 Marian Babik <marian.babik@cern.ch> - 1.0.0-1
-- Initial package
