@@ -4,7 +4,6 @@ SPECFILE_VERSION     = $(shell awk '$$1 == "Version:"  { print $$2 }' $(SPECFILE
 DIST                ?= $(shell rpm --eval %{dist})
 
 sources:
-        which python3
 	/usr/bin/python3 setup.py sdist
 
 srpm: sources
