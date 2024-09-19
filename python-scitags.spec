@@ -6,7 +6,7 @@
 Name: python3-scitags
 Version: 1.1.4
 Release: %{release}
-Summary: Flow and Packet Marking Service
+Summary: Scitags Flow and Packet Marking Service
 Url: https://github.com/scitags/flowd
 Source0: %{pypi_name}-%{version}.tar.gz
 # Source0: https://files.pythonhosted.org/packages/source/f/%{pypi_name}/%{pypi_name}-%{version}.tar.gz
@@ -16,11 +16,11 @@ Group: Development/Libraries
 Prefix: %{_prefix}
 BuildArch: noarch
 Obsoletes: python-flowd <= %{version}
-BuildRequires: python%{python3_pkgversion}-setuptools
-BuildRequires: python%{python3_pkgversion}-devel
+BuildRequires: python3-setuptools
+BuildRequires: python3-devel
 BuildRequires: systemd-rpm-macros
-Requires: python%{python3_pkgversion}-requests
-Requires: python%{python3_pkgversion}-psutil 
+Requires: python3-requests
+Requires: python3-psutil 
 Requires: systemd
 
 %description
