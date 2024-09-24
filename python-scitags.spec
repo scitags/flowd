@@ -1,6 +1,6 @@
 %define pypi_name scitags
 %define version 1.1.5
-%define release 1%{?dist}
+%define release 2%{?dist}
 %define _unpackaged_files_terminate_build 0
 
 Name: python3-scitags
