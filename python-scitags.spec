@@ -1,6 +1,6 @@
 %define pypi_name scitags
 %define version 1.1.5
-%define release 2%{?dist}
+%define release 3%{?dist}
 %define _unpackaged_files_terminate_build 0
 
 Name: python3-scitags
@@ -31,7 +31,7 @@ Flow and Packet Marking Service (flowd) implementation based on the Scitags spec
 %package prometheus
 Summary:        Prometheus flowd backend
 Group:          Development/Libraries
-Requires:       python%{python3_pkgversion}-flowd
+Requires:       python%{python3_pkgversion}-scitags
 Requires:       python%{python3_pkgversion}-prometheus_client
 Requires:       iproute
 
@@ -41,7 +41,7 @@ This package adds Prometheus exporter for the network flows including detailed n
 %package netlink
 Summary:        Netlink flowd plugin and backend
 Group:          Development/Libraries
-Requires:       python%{python3_pkgversion}-flowd
+Requires:       python%{python3_pkgversion}-scitags
 Requires:       python%{python3_pkgversion}-pyroute2
 Requires:       iproute
 
