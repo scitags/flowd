@@ -7,7 +7,7 @@ RUN yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.n
 RUN yum -y update
 RUN yum -y install python3-devel python3-pip 
 RUN pip install --no-cache-dir -r requirements.txt
-RUN yum -y install python3-bcc python3-systemd
+RUN yum -y install python3-bcc python3-systemd iproute-tc
 ENV PYTHONPATH=/usr/src/app
 
 COPY . .
