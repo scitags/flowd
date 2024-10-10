@@ -74,8 +74,14 @@ def run(flow_queue, term_event, ip_config):
                 log.debug('Failed to parse IPs: {}/{}'.format(src, dst))
                 log.exception(e)
                 continue
-            if not all(isinstance(v, int) for v in (src_port, dst_port, exp_id, activity_id)):
+            try:
+                src_port = int(src_port)
+                dst_port = int(dst_port)
+                exp_id = int(exp_id)
+                activity_id = int(activity_id)
+            except ValueError as e:
                 log.debug('Failed to parse integers: {}'.format((src_port, dst_port, exp_id, activity_id)))
+                log.exception(e)
                 continue
 
             if 'start' in flow_state:

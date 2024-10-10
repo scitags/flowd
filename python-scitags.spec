@@ -83,6 +83,7 @@ rm -rf $RPM_BUILD_ROOT
 %{python3_sitelib}/scitags/plugins/netstat.py
 %{python3_sitelib}/scitags/plugins/__init__.py
 %{python3_sitelib}/scitags/plugins/iperf.py
+%{python3_sitelib}/scitags/plugins/np_api.py
 %{python3_sitelib}/scitags/backends/udp_firefly.py
 %{python3_sitelib}/scitags/backends/__init__.py
 %{python3_sitelib}/scitags/netlink/__init__.py
