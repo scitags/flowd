@@ -18,6 +18,8 @@ import ctypes
 import ipaddress
 import random
 import sys
+import psutil
+import socket
 
 log = logging.getLogger('scitags')
 
@@ -169,9 +171,19 @@ def ebpf_init():
         for interface in interfacelist.split(","):
             idxdict[interface] = ipr.link_lookup(ifname=interface)[0]
     else:
-        err = 'eBPF backend requires network interface to be specified'
-        log.error(err)
-        raise scitags.FlowIdException(err)
+        log.info('Discovering IPv6 capable network interfaces')
+        interfaces = list()
+        for k, v in psutil.net_if_addrs().items():
+            for ips in v:
+                if ips.family == socket.AF_INET6 and ipaddress.ip_address(ips.address).is_global:
+                    interfaces.append(k)
+        if not interfaces:
+            err = 'No IPv6 capable network interface found, please specify explicitly via NETWORK_INTERFACE' 
+            log.error(err)
+            raise scitags.FlowIdException(err)
+        log.debug('IPv6 interfaces found: {}'.format(interfaces))
+        for interface in interfaces:
+            idxdict[interface] = ipr.link_lookup(ifname=interface)[0]
     log.debug('eBPF attached')
     # Clean up, in case backend crashed last time
     for key in idxdict:
@@ -314,4 +326,8 @@ def run(flow_queue, term_event, flow_map, ip_config):
 
     # Clean up
     for key in idxdict:
-        ipr.tc("del", "sfq", idxdict[key], "1:")
+        try:
+            ipr.tc("del", "sfq", idxdict[key], "1:")
+        except Exception as e:
+            log.exception(e)
+            continue
