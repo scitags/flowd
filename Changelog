@@ -1,3 +1,10 @@
+* Mon Oct 14 2024 Marian Babik <marian.babik@cern.ch> 1.1.6
+- np_api: Fix int parsing and include np_api plugin in rpm
+- netlink: added ip6 zone index handling; num() using regex now
+- ebpf: added auto-discovery of network interfaces
+- added dummy backend
+- docker image updated to fedora 40 and latest bcc (to support kernels 6.6+)
+
 * Thu Sep 19 2024 Marian Babik <marian.babik@cern.ch> 1.1.5
 - cache_ss: fixed missing ss_path
 - added ip6 zone index handling in ss parser
