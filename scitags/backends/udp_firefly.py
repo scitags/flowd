@@ -99,9 +99,15 @@ def firefly_json(flow_id, flow_map, ipconfig, netlink_cache):
                                                 flow_id.dst, flow_id.dst_port, netlink_cache)
 
     if ipconfig and afi == 'ipv6' and ipconfig.pub_ip6:
-        firefly['flow-id']['src-ip'] = ipconfig.pub_ip6
+        if firefly['flow-id']['src-ip'] == ipconfig.int_ip6:
+            firefly['flow-id']['src-ip'] = ipconfig.pub_ip6
+        if firefly['flow-id']['dst-ip'] == ipconfig.int_ip6:
+            firefly['flow-id']['dst-ip'] = ipconfig.pub_ip6
     if ipconfig and afi == 'ipv4' and ipconfig.pub_ip4:
-        firefly['flow-id']['src-ip'] = ipconfig.pub_ip4
+        if firefly['flow-id']['src-ip'] == ipconfig.int_ip4:
+            firefly['flow-id']['src-ip'] = ipconfig.pub_ip4
+        if firefly['flow-id']['dst-ip'] == ipconfig.int_ip4:
+            firefly['flow-id']['dst-ip'] = ipconfig.pub_ip4
 
     if afi == 'ipv4' and 'UDP_FIREFLY_IP4_SRC' in config.keys():
         firefly['flow-id']['src-ip'] = config['UDP_FIREFLY_IP4_SRC']
