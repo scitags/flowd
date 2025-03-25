@@ -8,7 +8,7 @@ except ImportError:
 
 AUTHOR = "Marian Babik <Marian.Babik@cern.ch>, Tristan Sullivan <tssulliv@uvic.ca>, Luca Bassi"
 AUTHOR_EMAIL = "<net-wg-dev@cern.ch>"
-VERSION = "1.1.7"
+VERSION = "1.1.8"
 DATE = "25 Mar 2025"
 __author__ = AUTHOR
 __version__ = VERSION
